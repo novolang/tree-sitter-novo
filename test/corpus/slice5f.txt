@@ -1,0 +1,282 @@
+==================
+var keyword
+==================
+
+var x = 5
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (integer_literal)))
+
+==================
+assignment statement
+==================
+
+fn f()
+    let mut x = 1
+    x = 2
+
+---
+
+(source_file
+  (fn_decl
+    name: (identifier)
+    params: (param_list)
+    body: (block
+      (let_stmt
+        name: (identifier)
+        value: (integer_literal))
+      (expr_stmt
+        (assignment_stmt
+          target: (identifier)
+          value: (integer_literal))))))
+
+==================
+compound assignment
+==================
+
+fn f()
+    var n = 0
+    n += 1
+
+---
+
+(source_file
+  (fn_decl
+    name: (identifier)
+    params: (param_list)
+    body: (block
+      (let_stmt
+        name: (identifier)
+        value: (integer_literal))
+      (expr_stmt
+        (assignment_stmt
+          target: (identifier)
+          value: (integer_literal))))))
+
+==================
+hex + binary literals
+==================
+
+let h = 0xFF
+let b = 0b1010
+let o = 0o755
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (integer_literal))
+  (let_stmt
+    name: (identifier)
+    value: (integer_literal))
+  (let_stmt
+    name: (identifier)
+    value: (integer_literal)))
+
+==================
+fn type
+==================
+
+fn apply(f: fn(Int) -> Int, x: Int) -> Int
+    f(x)
+
+---
+
+(source_file
+  (fn_decl
+    name: (identifier)
+    params: (param_list
+      (param
+        name: (identifier)
+        type: (fn_type
+          (named_type
+            (identifier))
+          (named_type
+            (identifier))))
+      (param
+        name: (identifier)
+        type: (named_type
+          (identifier))))
+    return_type: (named_type
+      (identifier))
+    body: (block
+      (expr_stmt
+        (call_expr
+          callee: (identifier)
+          (identifier))))))
+
+==================
+range expression
+==================
+
+for i in 1..10
+    println(i)
+
+---
+
+(source_file
+  (for_stmt
+    binder: (identifier_pattern
+      (identifier))
+    iter: (range_expr
+      (integer_literal)
+      (integer_literal))
+    body: (block
+      (expr_stmt
+        (call_expr
+          callee: (identifier)
+          (identifier))))))
+
+==================
+scientific float
+==================
+
+let eps = 1e-9
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (float_literal)))
+
+==================
+match as expression
+==================
+
+let n = match x
+    1 => "one"
+    _ => "other"
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (match_expr
+      scrutinee: (identifier)
+      body: (match_block
+        (match_arm
+          pattern: (literal_pattern
+            (integer_literal))
+          body: (string_literal))
+        (match_arm
+          pattern: (wildcard_pattern)
+          body: (string_literal))))))
+
+==================
+register decl
+==================
+
+register MODE at 0x40020000 : u32
+    field mode0 : 2
+    field mode1 : 2 @ 8
+
+---
+
+(source_file
+  (register_decl
+    name: (identifier)
+    addr: (integer_literal)
+    type: (named_type
+      (identifier))
+    body: (field_decl_block
+      (field_decl
+        name: (identifier)
+        width: (integer_literal))
+      (field_decl
+        name: (identifier)
+        width: (integer_literal)
+        offset: (integer_literal)))))
+
+==================
+error_kind decl
+==================
+
+error_kind DnsError
+    Truncated code: "DNS-001"
+    InvalidLabel(offset: Int) code: "DNS-005"
+
+---
+
+(source_file
+  (error_kind_decl
+    name: (identifier)
+    body: (error_variant_block
+      (error_variant
+        name: (identifier)
+        (identifier)
+        (string_literal))
+      (error_variant
+        name: (identifier)
+        (param
+          name: (identifier)
+          type: (named_type
+            (identifier)))
+        (identifier)
+        (string_literal)))))
+
+==================
+struct with attribute
+==================
+
+@big_endian
+struct Header
+    id: u16
+    flags: u16
+
+---
+
+(source_file
+  (struct_decl
+    attrs: (attribute
+      (identifier))
+    name: (identifier)
+    body: (block
+      (struct_field
+        name: (identifier)
+        type: (named_type
+          (identifier)))
+      (struct_field
+        name: (identifier)
+        type: (named_type
+          (identifier))))))
+
+==================
+block comment
+==================
+
+/* hello */
+let x = 1
+
+---
+
+(source_file
+  (block_comment)
+  (let_stmt
+    name: (identifier)
+    value: (integer_literal)))
+
+==================
+doc comment
+==================
+
+/// docstring
+fn foo()
+    1
+
+---
+
+(source_file
+  (doc_comment)
+  (fn_decl
+    name: (identifier)
+    params: (param_list)
+    body: (block
+      (expr_stmt
+        (integer_literal)))))

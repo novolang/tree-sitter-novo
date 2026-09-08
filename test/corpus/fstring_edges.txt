@@ -1,0 +1,81 @@
+================================================================
+hash is literal text at the head of an f-string
+================================================================
+
+fn render() -> Str
+    "#${e.seq} say ${e.room}"
+
+----
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list)
+    (named_type
+      (identifier))
+    (block
+      (expr_stmt
+        (fstring_literal
+          (fstring_segment)
+          (fstring_interp
+            (field_access
+              (identifier)
+              (identifier)))
+          (fstring_segment)
+          (fstring_interp
+            (field_access
+              (identifier)
+              (identifier))))))))
+
+================================================================
+hash is a format-spec flag
+================================================================
+
+fn show()
+    println("${n:#x}")
+    println("${255:#010b}")
+
+----
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list)
+    (block
+      (expr_stmt
+        (call_expr
+          (identifier)
+          (fstring_literal
+            (fstring_interp
+              (identifier)
+              (fstring_format_spec)))))
+      (expr_stmt
+        (call_expr
+          (identifier)
+          (fstring_literal
+            (fstring_interp
+              (integer_literal)
+              (fstring_format_spec))))))))
+
+================================================================
+leading and trailing spaces stay inside the segment
+================================================================
+
+fn pad() -> Str
+    "  ${x}  "
+
+----
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list)
+    (named_type
+      (identifier))
+    (block
+      (expr_stmt
+        (fstring_literal
+          (fstring_segment)
+          (fstring_interp
+            (identifier))
+          (fstring_segment))))))

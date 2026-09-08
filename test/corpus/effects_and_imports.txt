@@ -1,0 +1,286 @@
+================================================================
+use with brace group
+================================================================
+
+use ml.{core, cpu, loader}
+
+----
+
+(source_file
+  (use_decl
+    (module_path
+      (identifier)
+      (import_group
+        (identifier)
+        (identifier)
+        (identifier)))))
+
+================================================================
+use with glob
+================================================================
+
+use ml.*
+
+----
+
+(source_file
+  (use_decl
+    (module_path
+      (identifier)
+      (import_glob))))
+
+================================================================
+use with alias
+================================================================
+
+use ml.core as c
+
+----
+
+(source_file
+  (use_decl
+    (module_path
+      (identifier)
+      (identifier))
+    (identifier)))
+
+================================================================
+impl with effect row
+================================================================
+
+impl Read[io] for File
+    fn read(self) -> Str [io]
+        io.read()
+
+----
+
+(source_file
+  (impl_decl
+    (named_type
+      (identifier))
+    (effect_list
+      (identifier))
+    (named_type
+      (identifier))
+    (block
+      (fn_decl
+        (identifier)
+        (param_list
+          (self_param))
+        (named_type
+          (identifier))
+        (effect_list
+          (identifier))
+        (block
+          (expr_stmt
+            (call_expr
+              (field_access
+                (identifier)
+                (identifier)))))))))
+
+================================================================
+impl with empty effect row
+================================================================
+
+impl Read[] for Buffer
+    fn read(self) -> Str
+        self.data
+
+----
+
+(source_file
+  (impl_decl
+    (named_type
+      (identifier))
+    (effect_list)
+    (named_type
+      (identifier))
+    (block
+      (fn_decl
+        (identifier)
+        (param_list
+          (self_param))
+        (named_type
+          (identifier))
+        (block
+          (expr_stmt
+            (field_access
+              (self_expr)
+              (identifier))))))))
+
+================================================================
+impl with multi effect row
+================================================================
+
+impl FrameTransport[net, ipc] for UdsChan
+    fn send(self, b: Bytes) [net, ipc]
+        chan.write(b)
+
+----
+
+(source_file
+  (impl_decl
+    (named_type
+      (identifier))
+    (effect_list
+      (identifier)
+      (identifier))
+    (named_type
+      (identifier))
+    (block
+      (fn_decl
+        (identifier)
+        (param_list
+          (self_param)
+          (param
+            (identifier)
+            (named_type
+              (identifier))))
+        (effect_list
+          (identifier)
+          (identifier))
+        (block
+          (expr_stmt
+            (call_expr
+              (field_access
+                (identifier)
+                (identifier))
+              (identifier))))))))
+
+================================================================
+fn type carrying effects
+================================================================
+
+struct Handlers
+    on_event: fn(Int, Int) -> Int [io]
+
+----
+
+(source_file
+  (struct_decl
+    (identifier)
+    (block
+      (struct_field
+        (identifier)
+        (fn_type
+          (named_type
+            (identifier))
+          (named_type
+            (identifier))
+          (named_type
+            (identifier))
+          (effect_list
+            (identifier)))))))
+
+================================================================
+trait with supertrait
+================================================================
+
+trait Map<K, V> : Collection
+    fn get(self, k: K) -> ?V
+
+----
+
+(source_file
+  (trait_decl
+    (identifier)
+    (type_params
+      (type_param
+        (identifier))
+      (type_param
+        (identifier)))
+    (named_type
+      (identifier))
+    (block
+      (fn_decl
+        (identifier)
+        (param_list
+          (self_param)
+          (param
+            (identifier)
+            (named_type
+              (identifier))))
+        (optional_type
+          (named_type
+            (identifier)))))))
+
+================================================================
+postfix unwrap
+================================================================
+
+fn main() [io]
+    let x = parse_int(s)!
+    show(client.rooms(base)!)
+    let y = parse_int_safe(s)! * 2
+
+----
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list)
+    (effect_list
+      (identifier))
+    (block
+      (let_stmt
+        (identifier)
+        (unwrap_expr
+          (call_expr
+            (identifier)
+            (identifier))))
+      (expr_stmt
+        (call_expr
+          (identifier)
+          (unwrap_expr
+            (call_expr
+              (field_access
+                (identifier)
+                (identifier))
+              (identifier)))))
+      (let_stmt
+        (identifier)
+        (binary_expr
+          (unwrap_expr
+            (call_expr
+              (identifier)
+              (identifier)))
+          (integer_literal))))))
+
+================================================================
+unicode char escape
+================================================================
+
+fn main()
+    let c = '\u{263A}'
+    let z = '\u{0}'
+
+----
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list)
+    (block
+      (let_stmt
+        (identifier)
+        (char_literal))
+      (let_stmt
+        (identifier)
+        (char_literal)))))
+
+================================================================
+unit literal
+================================================================
+
+fn nothing()
+    ()
+
+----
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list)
+    (block
+      (expr_stmt
+        (unit_literal)))))

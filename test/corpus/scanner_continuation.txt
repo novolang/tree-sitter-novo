@@ -1,0 +1,142 @@
+================================================================
+method chain continued on following lines
+================================================================
+
+fn build() -> Cli
+    Cli.new("tool", "a small build tool")
+        .cmd(CliCmd.new("build", "compile")
+                .bool_flag("release", "r", "optimised build")
+                .arg("target", "what to build"))
+        .cmd(CliCmd.new("test", "run the test suite")
+                .opt_arg("package", "restrict to one package"))
+
+----
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list)
+    (named_type
+      (identifier))
+    (block
+      (expr_stmt
+        (call_expr
+          (field_access
+            (call_expr
+              (field_access
+                (call_expr
+                  (field_access
+                    (identifier)
+                    (identifier))
+                  (string_literal)
+                  (string_literal))
+                (identifier))
+              (call_expr
+                (field_access
+                  (call_expr
+                    (field_access
+                      (call_expr
+                        (field_access
+                          (identifier)
+                          (identifier))
+                        (string_literal)
+                        (string_literal))
+                      (identifier))
+                    (string_literal)
+                    (string_literal)
+                    (string_literal))
+                  (identifier))
+                (string_literal)
+                (string_literal)))
+            (identifier))
+          (call_expr
+            (field_access
+              (call_expr
+                (field_access
+                  (identifier)
+                  (identifier))
+                (string_literal)
+                (string_literal))
+              (identifier))
+            (string_literal)
+            (string_literal)))))))
+
+================================================================
+arithmetic continued on following lines
+================================================================
+
+fn hdr(a: Str, b: Str) -> Str
+    var s = "range(" + a
+            + b + ")"
+            + " window"
+    s
+
+----
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list
+      (param
+        (identifier)
+        (named_type
+          (identifier)))
+      (param
+        (identifier)
+        (named_type
+          (identifier))))
+    (named_type
+      (identifier))
+    (block
+      (let_stmt
+        (identifier)
+        (binary_expr
+          (binary_expr
+            (binary_expr
+              (binary_expr
+                (string_literal)
+                (identifier))
+              (identifier))
+            (string_literal))
+          (string_literal)))
+      (expr_stmt
+        (identifier)))))
+
+================================================================
+a dot line does not swallow a real block body
+================================================================
+
+fn f(c: Bool, x: Rec) -> Int
+    if c
+        x.field
+    else
+        0
+
+----
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list
+      (param
+        (identifier)
+        (named_type
+          (identifier)))
+      (param
+        (identifier)
+        (named_type
+          (identifier))))
+    (named_type
+      (identifier))
+    (block
+      (if_stmt
+        (identifier)
+        (block
+          (expr_stmt
+            (field_access
+              (identifier)
+              (identifier)))))
+      (else_stmt
+        (block
+          (expr_stmt
+            (integer_literal)))))))

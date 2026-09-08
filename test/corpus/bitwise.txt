@@ -1,0 +1,215 @@
+==================
+zigzag fold — a writer's parentheses around the shifts
+==================
+
+let z = (n << 1) ^ (n >> 63)
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (binary_expr
+      (paren_expr
+        (binary_expr
+          (identifier)
+          (integer_literal)))
+      (paren_expr
+        (binary_expr
+          (identifier)
+          (integer_literal))))))
+
+==================
+a bitwise and binds tighter than a comparison
+==================
+
+let m = a & b == c
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (binary_expr
+      (binary_expr
+        (identifier)
+        (identifier))
+      (identifier))))
+
+==================
+prefix complement
+==================
+
+let u = ~x
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (unary_expr
+      (identifier))))
+
+==================
+the four bitwise levels in Rust's order
+==================
+
+let v = a | b ^ c & d << e
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (binary_expr
+      (identifier)
+      (binary_expr
+        (identifier)
+        (binary_expr
+          (identifier)
+          (binary_expr
+            (identifier)
+            (identifier)))))))
+
+==================
+the logical right shift
+==================
+
+let w = p >>> 1
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (binary_expr
+      (identifier)
+      (integer_literal))))
+
+==================
+nested generics still close with one token
+==================
+
+fn nested(p: Pair<Box<Int>, Box<Box<Int>>>) -> Box<Box<Int>>
+    p.b
+
+---
+
+(source_file
+  (fn_decl
+    name: (identifier)
+    params: (param_list
+      (param
+        name: (identifier)
+        type: (generic_type
+          (identifier)
+          (generic_type
+            (identifier)
+            (named_type
+              (identifier)))
+          (generic_type
+            (identifier)
+            (generic_type
+              (identifier)
+              (named_type
+                (identifier)))))))
+    return_type: (generic_type
+      (identifier)
+      (generic_type
+        (identifier)
+        (named_type
+          (identifier))))
+    body: (block
+      (expr_stmt
+        (field_access
+          value: (identifier)
+          field: (identifier))))))
+
+==================
+compound bitwise assignment
+==================
+
+fn fold(var acc: Int, b: Int) -> Int
+    acc &= b
+    acc |= b
+    acc ^= b
+    acc %= b
+    acc
+
+---
+
+(source_file
+  (fn_decl
+    name: (identifier)
+    params: (param_list
+      (param
+        name: (identifier)
+        type: (named_type
+          (identifier)))
+      (param
+        name: (identifier)
+        type: (named_type
+          (identifier))))
+    return_type: (named_type
+      (identifier))
+    body: (block
+      (expr_stmt
+        (assignment_stmt
+          target: (identifier)
+          value: (identifier)))
+      (expr_stmt
+        (assignment_stmt
+          target: (identifier)
+          value: (identifier)))
+      (expr_stmt
+        (assignment_stmt
+          target: (identifier)
+          value: (identifier)))
+      (expr_stmt
+        (assignment_stmt
+          target: (identifier)
+          value: (identifier)))
+      (expr_stmt
+        (identifier)))))
+
+==================
+compound shift assignment
+==================
+
+fn shifted(var acc: Int, n: Int) -> Int
+    acc <<= n
+    acc >>= n
+    acc >>>= n
+    acc
+
+---
+
+(source_file
+  (fn_decl
+    name: (identifier)
+    params: (param_list
+      (param
+        name: (identifier)
+        type: (named_type
+          (identifier)))
+      (param
+        name: (identifier)
+        type: (named_type
+          (identifier))))
+    return_type: (named_type
+      (identifier))
+    body: (block
+      (expr_stmt
+        (assignment_stmt
+          target: (identifier)
+          value: (identifier)))
+      (expr_stmt
+        (assignment_stmt
+          target: (identifier)
+          value: (identifier)))
+      (expr_stmt
+        (assignment_stmt
+          target: (identifier)
+          value: (identifier)))
+      (expr_stmt
+        (identifier)))))

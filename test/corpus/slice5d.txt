@@ -1,0 +1,254 @@
+==================
+trait decl with body
+==================
+
+trait Greet
+    fn hello(self) -> Str
+
+---
+
+(source_file
+  (trait_decl
+    name: (identifier)
+    body: (block
+      (fn_decl
+        name: (identifier)
+        params: (param_list
+          (self_param))
+        return_type: (named_type
+          (identifier))))))
+
+==================
+impl Trait for Type
+==================
+
+impl Greet for Person
+    fn hello(self) -> Str
+        "hi"
+
+---
+
+(source_file
+  (impl_decl
+    subject: (named_type
+      (identifier))
+    target: (named_type
+      (identifier))
+    body: (block
+      (fn_decl
+        name: (identifier)
+        params: (param_list
+          (self_param))
+        return_type: (named_type
+          (identifier))
+        body: (block
+          (expr_stmt
+            (string_literal)))))))
+
+==================
+inherent impl
+==================
+
+impl Bot
+    fn ping(self) -> Int
+        42
+
+---
+
+(source_file
+  (impl_decl
+    subject: (named_type
+      (identifier))
+    body: (block
+      (fn_decl
+        name: (identifier)
+        params: (param_list
+          (self_param))
+        return_type: (named_type
+          (identifier))
+        body: (block
+          (expr_stmt
+            (integer_literal)))))))
+
+==================
+struct literal
+==================
+
+let p = Point { x: 1.0, y: 2.0 }
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (struct_literal
+      type: (identifier)
+      (struct_literal_field
+        name: (identifier)
+        value: (float_literal))
+      (struct_literal_field
+        name: (identifier)
+        value: (float_literal)))))
+
+==================
+match with structural arms
+==================
+
+fn area(s: Shape) -> Float
+    match s
+        Circle(r) =>
+            r * r
+        _ => 0.0
+
+---
+
+(source_file
+  (fn_decl
+    name: (identifier)
+    params: (param_list
+      (param
+        name: (identifier)
+        type: (named_type
+          (identifier))))
+    return_type: (named_type
+      (identifier))
+    body: (block
+      (expr_stmt
+        (match_expr
+          scrutinee: (identifier)
+          body: (match_block
+            (match_arm
+              pattern: (constructor_pattern
+                (identifier)
+                (identifier_pattern
+                  (identifier)))
+              body: (block
+                (expr_stmt
+                  (binary_expr
+                    (identifier)
+                    (identifier)))))
+            (match_arm
+              pattern: (wildcard_pattern)
+              body: (float_literal))))))))
+
+==================
+if/elif/else with bodies
+==================
+
+if x > 0
+    println("pos")
+elif x < 0
+    println("neg")
+else
+    println("zero")
+
+---
+
+(source_file
+  (if_stmt
+    condition: (binary_expr
+      (identifier)
+      (integer_literal))
+    body: (block
+      (expr_stmt
+        (call_expr
+          callee: (identifier)
+          (string_literal)))))
+  (elif_stmt
+    condition: (binary_expr
+      (identifier)
+      (integer_literal))
+    body: (block
+      (expr_stmt
+        (call_expr
+          callee: (identifier)
+          (string_literal)))))
+  (else_stmt
+    body: (block
+      (expr_stmt
+        (call_expr
+          callee: (identifier)
+          (string_literal))))))
+
+==================
+for loop with body
+==================
+
+for x in items
+    println(x)
+
+---
+
+(source_file
+  (for_stmt
+    binder: (identifier_pattern
+      (identifier))
+    iter: (identifier)
+    body: (block
+      (expr_stmt
+        (call_expr
+          callee: (identifier)
+          (identifier))))))
+
+==================
+return / break / continue / pass
+==================
+
+return 1
+break
+continue
+pass
+
+---
+
+(source_file
+  (return_stmt
+    (integer_literal))
+  (break_stmt)
+  (continue_stmt)
+  (pass_stmt))
+
+==================
+cast expression
+==================
+
+let n = x as Int
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (cast_expr
+      (identifier)
+      (named_type
+        (identifier)))))
+
+==================
+await expression
+==================
+
+let r = await fetch()
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (await_expr
+      (call_expr
+        callee: (identifier)))))
+
+==================
+self field access
+==================
+
+self.name
+
+---
+
+(source_file
+  (expr_stmt
+    (field_access
+      value: (self_expr)
+      field: (identifier))))

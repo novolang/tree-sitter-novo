@@ -1,0 +1,108 @@
+==================
+plain string
+==================
+
+let s = "hello world"
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (string_literal)))
+
+==================
+fstring with single interpolation
+==================
+
+let s = "hi ${name}"
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (fstring_literal
+      (fstring_segment)
+      (fstring_interp
+        expr: (identifier)))))
+
+==================
+fstring with multiple interpolations
+==================
+
+let s = "${a} and ${b}"
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (fstring_literal
+      (fstring_interp
+        expr: (identifier))
+      (fstring_segment)
+      (fstring_interp
+        expr: (identifier)))))
+
+==================
+fstring with format spec
+==================
+
+let s = "[${n:5}]"
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (fstring_literal
+      (fstring_segment)
+      (fstring_interp
+        expr: (identifier)
+        format: (fstring_format_spec))
+      (fstring_segment))))
+
+==================
+plain string with literal dollar
+==================
+
+let s = "price: $5"
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (string_literal)))
+
+==================
+plain string with trailing dollar
+==================
+
+let s = "anchor$"
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (string_literal)))
+
+==================
+fstring with binary expr in interp
+==================
+
+let s = "n+1 = ${n + 1}"
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (fstring_literal
+      (fstring_segment)
+      (fstring_interp
+        expr: (binary_expr
+          (identifier)
+          (integer_literal))))))

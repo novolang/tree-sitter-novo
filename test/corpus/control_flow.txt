@@ -1,0 +1,127 @@
+==================
+return with no value
+==================
+
+return
+
+---
+
+(source_file
+  (return_stmt))
+
+==================
+return with value
+==================
+
+return n + 1
+
+---
+
+(source_file
+  (return_stmt
+    (binary_expr
+      (identifier)
+      (integer_literal))))
+
+==================
+if header
+==================
+
+if x > 0
+
+---
+
+(source_file
+  (if_stmt
+    condition: (binary_expr
+      (identifier)
+      (integer_literal))))
+
+==================
+elif and else markers
+==================
+
+elif x > 0
+else
+
+---
+
+(source_file
+  (elif_stmt
+    condition: (binary_expr
+      (identifier)
+      (integer_literal)))
+  (else_stmt))
+
+==================
+for binder iter
+==================
+
+for x in items
+
+---
+
+(source_file
+  (for_stmt
+    binder: (identifier_pattern
+      (identifier))
+    iter: (identifier)))
+
+==================
+while header
+==================
+
+while running
+
+---
+
+(source_file
+  (while_stmt
+    condition: (identifier)))
+
+==================
+match header
+==================
+
+match shape
+
+---
+
+(source_file
+  (match_stmt
+    scrutinee: (identifier)))
+
+==================
+named call args
+==================
+
+let p = Circle(radius: 5.0)
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (call_expr
+      callee: (identifier)
+      (named_arg
+        name: (identifier)
+        value: (float_literal)))))
+
+==================
+mixed positional + named args
+==================
+
+let p = Rect(4.0, height: 3.0)
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (call_expr
+      callee: (identifier)
+      (float_literal)
+      (named_arg
+        name: (identifier)
+        value: (float_literal)))))

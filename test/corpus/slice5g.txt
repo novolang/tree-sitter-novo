@@ -1,0 +1,301 @@
+==================
+req_decl with body
+==================
+
+functional REQ-DNS-001 "Header is 12 bytes"
+  priority: high
+  description: "every dns message"
+  acceptance: "exactly 12 bytes"
+  tags: dns, wire-format
+
+---
+
+(source_file
+  (req_decl
+    id: (req_id)
+    title: (string_literal)
+    body: (req_body
+      (req_field
+        key: (identifier)
+        value: (identifier))
+      (req_field
+        key: (identifier)
+        value: (string_literal))
+      (req_field
+        key: (identifier)
+        value: (string_literal))
+      (req_field
+        key: (identifier)
+        value: (req_tag_list
+          (req_tag
+            (identifier))
+          (req_tag
+            (identifier)))))))
+
+==================
+const decl
+==================
+
+const PORT: Int = 8080
+
+---
+
+(source_file
+  (const_decl
+    name: (identifier)
+    type: (named_type
+      (identifier))
+    value: (integer_literal)))
+
+==================
+frame decl with ++ composition
+==================
+
+frame Pkt = Eth ++ Proto ++ Payload
+
+---
+
+(source_file
+  (frame_decl
+    name: (identifier)
+    value: (named_type
+      (identifier))
+    value: (named_type
+      (identifier))
+    value: (named_type
+      (identifier))))
+
+==================
+or pattern in match arm
+==================
+
+match x
+    1 | 2 | 3 => true
+    _ => false
+
+---
+
+(source_file
+  (expr_stmt
+    (match_expr
+      scrutinee: (identifier)
+      body: (match_block
+        (match_arm
+          pattern: (or_pattern
+            (or_pattern
+              (literal_pattern
+                (integer_literal))
+              (literal_pattern
+                (integer_literal)))
+            (literal_pattern
+              (integer_literal)))
+          body: (bool_literal))
+        (match_arm
+          pattern: (wildcard_pattern)
+          body: (bool_literal))))))
+
+==================
+generic param with bound
+==================
+
+struct Wrap<T: Greet>
+    inner: T
+
+---
+
+(source_file
+  (struct_decl
+    name: (identifier)
+    type_params: (type_params
+      (type_param
+        (identifier)
+        (identifier)))
+    body: (block
+      (struct_field
+        name: (identifier)
+        type: (named_type
+          (identifier))))))
+
+==================
+fn type params with bounds
+==================
+
+fn run<T: Hci + Send>(x: T)
+    1
+
+---
+
+(source_file
+  (fn_decl
+    name: (identifier)
+    type_params: (type_params
+      (type_param
+        (identifier)
+        (identifier)
+        (identifier)))
+    params: (param_list
+      (param
+        name: (identifier)
+        type: (named_type
+          (identifier))))
+    body: (block
+      (expr_stmt
+        (integer_literal)))))
+
+==================
+fn type params square brackets
+==================
+
+fn run[T: Hci](x: T)
+    1
+
+---
+
+(source_file
+  (fn_decl
+    name: (identifier)
+    type_params: (type_params
+      (type_param
+        (identifier)
+        (identifier)))
+    params: (param_list
+      (param
+        name: (identifier)
+        type: (named_type
+          (identifier))))
+    body: (block
+      (expr_stmt
+        (integer_literal)))))
+
+==================
+unsafe_discharge stmt
+==================
+
+fn foo()
+    unsafe_discharge [time, rand]
+        do_thing()
+
+---
+
+(source_file
+  (fn_decl
+    name: (identifier)
+    params: (param_list)
+    body: (block
+      (unsafe_discharge_stmt
+        effects: (effect_list
+          (identifier)
+          (identifier))
+        body: (block
+          (expr_stmt
+            (call_expr
+              callee: (identifier))))))))
+
+==================
+prompt inheritance
+==================
+
+prompt Short : Long
+
+---
+
+(source_file
+  (prompt_decl
+    name: (identifier)
+    parent: (identifier)))
+
+==================
+weak type modifier
+==================
+
+let w: weak Box = Weak.new(x)
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    type: (modifier_type
+      (named_type
+        (identifier)))
+    value: (call_expr
+      callee: (field_access
+        value: (identifier)
+        field: (identifier))
+      (identifier))))
+
+==================
+match arm body is return
+==================
+
+match maybe
+    Some(x) => return x
+    None => return 0
+
+---
+
+(source_file
+  (expr_stmt
+    (match_expr
+      scrutinee: (identifier)
+      body: (match_block
+        (match_arm
+          pattern: (constructor_pattern
+            (identifier)
+            (identifier_pattern
+              (identifier)))
+          body: (return_stmt
+            (identifier)))
+        (match_arm
+          pattern: (literal_pattern
+            (none_literal))
+          body: (return_stmt
+            (integer_literal)))))))
+
+==================
+struct field with attribute
+==================
+
+@big_endian
+struct Hdr
+    @be id: u16
+    @be flags: u16
+
+---
+
+(source_file
+  (struct_decl
+    attrs: (attribute
+      (identifier))
+    name: (identifier)
+    body: (block
+      (struct_field
+        attrs: (attribute
+          (identifier))
+        name: (identifier)
+        type: (named_type
+          (identifier)))
+      (struct_field
+        attrs: (attribute
+          (identifier))
+        name: (identifier)
+        type: (named_type
+          (identifier))))))
+
+==================
+elif chain in if expr
+==================
+
+let n = if a then 1 elif b then 2 else 3
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (if_expr
+      condition: (identifier)
+      then: (integer_literal)
+      (identifier)
+      (integer_literal)
+      else: (integer_literal))))

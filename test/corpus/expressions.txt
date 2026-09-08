@@ -1,0 +1,259 @@
+==================
+binary add
+==================
+
+let n = 1 + 2
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (binary_expr
+      (integer_literal)
+      (integer_literal))))
+
+==================
+binary mul precedes add
+==================
+
+let n = 1 + 2 * 3
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (binary_expr
+      (integer_literal)
+      (binary_expr
+        (integer_literal)
+        (integer_literal)))))
+
+==================
+binary comparisons + and/or
+==================
+
+let ok = a == b and c < d or e
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (binary_expr
+      (binary_expr
+        (binary_expr
+          (identifier)
+          (identifier))
+        (binary_expr
+          (identifier)
+          (identifier)))
+      (identifier))))
+
+==================
+unary minus
+==================
+
+let m = -42
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (unary_expr
+      (integer_literal))))
+
+==================
+unary not
+==================
+
+let bad = not ready
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (unary_expr
+      (identifier))))
+
+==================
+null-coalesce
+==================
+
+let v = maybe ?? "default"
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (null_coalesce_expr
+      (identifier)
+      (string_literal))))
+
+==================
+pipe
+==================
+
+let r = xs |> map |> sum
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (pipe_expr
+      (pipe_expr
+        (identifier)
+        (identifier))
+      (identifier))))
+
+==================
+safe field access
+==================
+
+let v = obj?.field
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (field_access
+      value: (identifier)
+      field: (identifier))))
+
+==================
+parens override precedence
+==================
+
+let n = (1 + 2) * 3
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (binary_expr
+      (paren_expr
+        (binary_expr
+          (integer_literal)
+          (integer_literal)))
+      (integer_literal))))
+
+==================
+index expression
+==================
+
+let first = items[0]
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (index_expr
+      value: (identifier)
+      index: (integer_literal))))
+
+==================
+chained call + field access
+==================
+
+let n = builder.add(1).add(2)
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (call_expr
+      callee: (field_access
+        value: (call_expr
+          callee: (field_access
+            value: (identifier)
+            field: (identifier))
+          (integer_literal))
+        field: (identifier))
+      (integer_literal))))
+
+==================
+list comprehension
+==================
+
+let ys = [x for x in xs]
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (list_comprehension
+      element: (identifier)
+      binder: (identifier_pattern
+        (identifier))
+      iter: (identifier))))
+
+==================
+list comprehension with a guard
+==================
+
+let ys = [f(x) for x in xs if x > 1]
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (list_comprehension
+      element: (call_expr
+        callee: (identifier)
+        (identifier))
+      binder: (identifier_pattern
+        (identifier))
+      iter: (identifier)
+      guard: (binary_expr
+        (identifier)
+        (integer_literal)))))
+
+==================
+list comprehension over a range, nested in the element
+==================
+
+let rows = [[k for k in 1..n] for n in ns]
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (list_comprehension
+      element: (list_comprehension
+        element: (identifier)
+        binder: (identifier_pattern
+          (identifier))
+        iter: (range_expr
+          (integer_literal)
+          (identifier)))
+      binder: (identifier_pattern
+        (identifier))
+      iter: (identifier))))
+
+==================
+list literal is still a list literal
+==================
+
+let xs = [1, 2, 3]
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (list_literal
+      (integer_literal)
+      (integer_literal)
+      (integer_literal))))

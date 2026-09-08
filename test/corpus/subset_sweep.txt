@@ -1,0 +1,599 @@
+================================================================
+raw pointer types
+================================================================
+
+fn exotic(c: *Int, d: *const Int) -> Int
+    1
+
+----
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list
+      (param
+        (identifier)
+        (pointer_type
+          (named_type
+            (identifier))))
+      (param
+        (identifier)
+        (pointer_type
+          (named_type
+            (identifier)))))
+    (named_type
+      (identifier))
+    (block
+      (expr_stmt
+        (integer_literal)))))
+
+================================================================
+parenthesised return type keeps the row on the declaration
+================================================================
+
+fn mk() -> (fn() -> Unit) [mutate]
+    f
+
+----
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list)
+    (paren_type
+      (fn_type
+        (named_type
+          (identifier))))
+    (effect_list
+      (identifier))
+    (block
+      (expr_stmt
+        (identifier)))))
+
+================================================================
+unary deref
+================================================================
+
+fn read(p: *Int) -> Int
+    1 + *p
+
+----
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list
+      (param
+        (identifier)
+        (pointer_type
+          (named_type
+            (identifier)))))
+    (named_type
+      (identifier))
+    (block
+      (expr_stmt
+        (binary_expr
+          (integer_literal)
+          (unary_expr
+            (identifier)))))))
+
+================================================================
+type alias
+================================================================
+
+alias Id = Int
+alias Handler = fn(Int) -> Str
+
+----
+
+(source_file
+  (alias_decl
+    (identifier)
+    (named_type
+      (identifier)))
+  (alias_decl
+    (identifier)
+    (fn_type
+      (named_type
+        (identifier))
+      (named_type
+        (identifier)))))
+
+================================================================
+break with a value
+================================================================
+
+fn find() -> Int
+    loop
+        break 3
+
+----
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list)
+    (named_type
+      (identifier))
+    (block
+      (loop_stmt
+        (block
+          (break_stmt
+            (integer_literal)))))))
+
+================================================================
+range patterns
+================================================================
+
+fn f(x: Int) -> Int
+    match x
+        1..5 => 3
+        10..=20 => 4
+        _ => 0
+
+----
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list
+      (param
+        (identifier)
+        (named_type
+          (identifier))))
+    (named_type
+      (identifier))
+    (block
+      (expr_stmt
+        (match_expr
+          (identifier)
+          (match_block
+            (match_arm
+              (range_pattern
+                (integer_literal)
+                (integer_literal))
+              (integer_literal))
+            (match_arm
+              (range_pattern
+                (integer_literal)
+                (integer_literal))
+              (integer_literal))
+            (match_arm
+              (wildcard_pattern)
+              (integer_literal))))))))
+
+================================================================
+struct patterns
+================================================================
+
+fn f(v: Point) -> Int
+    match v
+        Point { } => 0
+        Point { .. } => 1
+        Point { x: 0, y } => y
+        Point { x, y, .. } => x + y
+
+----
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list
+      (param
+        (identifier)
+        (named_type
+          (identifier))))
+    (named_type
+      (identifier))
+    (block
+      (expr_stmt
+        (match_expr
+          (identifier)
+          (match_block
+            (match_arm
+              (struct_pattern
+                (identifier))
+              (integer_literal))
+            (match_arm
+              (struct_pattern
+                (identifier))
+              (integer_literal))
+            (match_arm
+              (struct_pattern
+                (identifier)
+                (struct_pattern_field
+                  (identifier)
+                  (literal_pattern
+                    (integer_literal)))
+                (struct_pattern_field
+                  (identifier)))
+              (identifier))
+            (match_arm
+              (struct_pattern
+                (identifier)
+                (struct_pattern_field
+                  (identifier))
+                (struct_pattern_field
+                  (identifier)))
+              (binary_expr
+                (identifier)
+                (identifier)))))))))
+
+================================================================
+list and cons patterns
+================================================================
+
+fn f(v: [Int]) -> Int
+    match v
+        [] => 0
+        [a, b] => a + b
+        [...rest] => 1
+        [a, ...] => a
+        [a, b, ...tail] => b
+
+----
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list
+      (param
+        (identifier)
+        (list_type
+          (named_type
+            (identifier)))))
+    (named_type
+      (identifier))
+    (block
+      (expr_stmt
+        (match_expr
+          (identifier)
+          (match_block
+            (match_arm
+              (list_pattern)
+              (integer_literal))
+            (match_arm
+              (list_pattern
+                (identifier_pattern
+                  (identifier))
+                (identifier_pattern
+                  (identifier)))
+              (binary_expr
+                (identifier)
+                (identifier)))
+            (match_arm
+              (cons_pattern
+                (identifier))
+              (integer_literal))
+            (match_arm
+              (cons_pattern
+                (identifier_pattern
+                  (identifier)))
+              (identifier))
+            (match_arm
+              (cons_pattern
+                (identifier_pattern
+                  (identifier))
+                (identifier_pattern
+                  (identifier))
+                (identifier))
+              (identifier))))))))
+
+================================================================
+as binding pattern
+================================================================
+
+fn f(s: Shape) -> Int
+    match s
+        Circle(r) as whole => r
+        _ => 0
+
+----
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list
+      (param
+        (identifier)
+        (named_type
+          (identifier))))
+    (named_type
+      (identifier))
+    (block
+      (expr_stmt
+        (match_expr
+          (identifier)
+          (match_block
+            (match_arm
+              (as_pattern
+                (constructor_pattern
+                  (identifier)
+                  (identifier_pattern
+                    (identifier)))
+                (identifier))
+              (identifier))
+            (match_arm
+              (wildcard_pattern)
+              (integer_literal))))))))
+
+================================================================
+block if as a match arm body
+================================================================
+
+fn f(v: ?Int, fallback: Int) -> Int
+    match v
+        Some(n) => n
+        None => if fallback > 0
+            fallback
+        else
+            0
+
+----
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list
+      (param
+        (identifier)
+        (optional_type
+          (named_type
+            (identifier))))
+      (param
+        (identifier)
+        (named_type
+          (identifier))))
+    (named_type
+      (identifier))
+    (block
+      (expr_stmt
+        (match_expr
+          (identifier)
+          (match_block
+            (match_arm
+              (constructor_pattern
+                (identifier)
+                (identifier_pattern
+                  (identifier)))
+              (identifier))
+            (match_arm
+              (literal_pattern
+                (none_literal))
+              (if_stmt
+                (binary_expr
+                  (identifier)
+                  (integer_literal))
+                (block
+                  (expr_stmt
+                    (identifier)))))
+            (else_stmt
+              (block
+                (expr_stmt
+                  (integer_literal))))))))))
+
+================================================================
+parameter defaults and var params
+================================================================
+
+fn f(var a: Int, mut b: Str, c: Int = 2, d: Str = "x") -> Int
+    a
+
+----
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list
+      (param
+        (identifier)
+        (named_type
+          (identifier)))
+      (param
+        (identifier)
+        (named_type
+          (identifier)))
+      (param
+        (identifier)
+        (named_type
+          (identifier))
+        (integer_literal))
+      (param
+        (identifier)
+        (named_type
+          (identifier))
+        (string_literal)))
+    (named_type
+      (identifier))
+    (block
+      (expr_stmt
+        (identifier)))))
+
+================================================================
+struct fields with var and mut
+================================================================
+
+struct S
+    x: Int
+    var y: Str
+    mut z: Bool
+    @be var m: Int
+
+----
+
+(source_file
+  (struct_decl
+    (identifier)
+    (block
+      (struct_field
+        (identifier)
+        (named_type
+          (identifier)))
+      (struct_field
+        (identifier)
+        (named_type
+          (identifier)))
+      (struct_field
+        (identifier)
+        (named_type
+          (identifier)))
+      (struct_field
+        (attribute
+          (identifier))
+        (identifier)
+        (named_type
+          (identifier))))))
+
+================================================================
+dotted annotation name
+================================================================
+
+@intent.verify(runtime)
+fn f() -> Int
+    1
+
+----
+
+(source_file
+  (fn_decl
+    (attribute
+      (identifier)
+      (identifier)
+      (identifier))
+    (identifier)
+    (param_list)
+    (named_type
+      (identifier))
+    (block
+      (expr_stmt
+        (integer_literal)))))
+
+================================================================
+typed for binder
+================================================================
+
+fn f(xs: [Int])
+    for x: Int in xs
+        pass
+
+----
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list
+      (param
+        (identifier)
+        (list_type
+          (named_type
+            (identifier)))))
+    (block
+      (for_stmt
+        (identifier)
+        (named_type
+          (identifier))
+        (identifier)
+        (block
+          (pass_stmt))))))
+
+================================================================
+empty format spec
+================================================================
+
+fn f(y: Int) -> Str
+    "${y:}"
+
+----
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list
+      (param
+        (identifier)
+        (named_type
+          (identifier))))
+    (named_type
+      (identifier))
+    (block
+      (expr_stmt
+        (fstring_literal
+          (fstring_interp
+            (identifier)))))))
+
+================================================================
+let tuple destructure with a wildcard binder
+================================================================
+
+fn f() -> Int
+    let (a, _) = pair()
+    let (_, b) = pair()
+    a
+
+----
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list)
+    (named_type
+      (identifier))
+    (block
+      (let_stmt
+        (tuple_binder
+          (identifier)
+          (wildcard_pattern))
+        (call_expr
+          (identifier)))
+      (let_stmt
+        (tuple_binder
+          (wildcard_pattern)
+          (identifier))
+        (call_expr
+          (identifier)))
+      (expr_stmt
+        (identifier)))))
+
+================================================================
+inline break and continue as match arm bodies
+================================================================
+
+fn f(v: ?Int) -> Int
+    loop
+        match v
+            Some(k) => k
+            None => break
+    0
+
+----
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list
+      (param
+        (identifier)
+        (optional_type
+          (named_type
+            (identifier)))))
+    (named_type
+      (identifier))
+    (block
+      (loop_stmt
+        (block
+          (expr_stmt
+            (match_expr
+              (identifier)
+              (match_block
+                (match_arm
+                  (constructor_pattern
+                    (identifier)
+                    (identifier_pattern
+                      (identifier)))
+                  (identifier))
+                (match_arm
+                  (literal_pattern
+                    (none_literal))
+                  (break_stmt)))))))
+      (expr_stmt
+        (integer_literal)))))

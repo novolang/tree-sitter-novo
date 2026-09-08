@@ -1,0 +1,318 @@
+==================
+use declaration
+==================
+
+use std.fs
+
+---
+
+(source_file
+  (use_decl
+    path: (module_path
+      (identifier)
+      (identifier))))
+
+==================
+fn header — no body
+==================
+
+fn ping() -> Int
+
+---
+
+(source_file
+  (fn_decl
+    name: (identifier)
+    params: (param_list)
+    return_type: (named_type
+      (identifier))))
+
+==================
+fn header — params + effects
+==================
+
+fn read_file(path: Str) -> Str [io]
+
+---
+
+(source_file
+  (fn_decl
+    name: (identifier)
+    params: (param_list
+      (param
+        name: (identifier)
+        type: (named_type
+          (identifier))))
+    return_type: (named_type
+      (identifier))
+    effects: (effect_list
+      (identifier))))
+
+==================
+struct header
+==================
+
+struct Point
+
+---
+
+(source_file
+  (struct_decl
+    name: (identifier)))
+
+==================
+enum header
+==================
+
+enum Shape
+
+---
+
+(source_file
+  (enum_decl
+    name: (identifier)))
+
+==================
+let with int
+==================
+
+let n = 42
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (integer_literal)))
+
+==================
+let with string
+==================
+
+let greeting = "hello"
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (string_literal)))
+
+==================
+let with float
+==================
+
+let pi = 3.14159
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (float_literal)))
+
+==================
+let with mut + type annotation
+==================
+
+let mut count: Int = 0
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    type: (named_type
+      (identifier))
+    value: (integer_literal)))
+
+==================
+let with optional type
+==================
+
+let cached: ?Str = None
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    type: (optional_type
+      (named_type
+        (identifier)))
+    value: (none_literal)))
+
+==================
+let with list type and list literal
+==================
+
+let items: [Int] = [1, 2, 3]
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    type: (list_type
+      (named_type
+        (identifier)))
+    value: (list_literal
+      (integer_literal)
+      (integer_literal)
+      (integer_literal))))
+
+==================
+let with field-access call
+==================
+
+let now = time.now()
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (call_expr
+      callee: (field_access
+        value: (identifier)
+        field: (identifier)))))
+
+==================
+line comment ignored at top level
+==================
+
+// a comment
+use std.fs
+
+---
+
+(source_file
+  (line_comment)
+  (use_decl
+    path: (module_path
+      (identifier)
+      (identifier))))
+
+==================
+type alias — `alias` is the spelling
+==================
+
+alias Celsius = Float
+alias HttpHandler = fn(Str) -> Str [io, net, mutate]
+
+---
+
+(source_file
+  (alias_decl
+    name: (identifier)
+    value: (named_type
+      (identifier)))
+  (alias_decl
+    name: (identifier)
+    value: (fn_type
+      (named_type
+        (identifier))
+      (named_type
+        (identifier))
+      effects: (effect_list
+        (identifier)
+        (identifier)
+        (identifier)))))
+
+==================
+type alias with type parameters
+==================
+
+alias Pair<T> = (T, T)
+alias Table<K, V> = [(K, V)]
+
+---
+
+(source_file
+  (alias_decl
+    name: (identifier)
+    type_params: (type_params
+      (type_param
+        (identifier)))
+    value: (tuple_type
+      (named_type
+        (identifier))
+      (named_type
+        (identifier))))
+  (alias_decl
+    name: (identifier)
+    type_params: (type_params
+      (type_param
+        (identifier))
+      (type_param
+        (identifier)))
+    value: (list_type
+      (tuple_type
+        (named_type
+          (identifier))
+        (named_type
+          (identifier))))))
+
+==================
+pub fn — visibility does not become a statement
+==================
+
+pub fn add(a: Int) -> Int
+  return a
+
+---
+
+(source_file
+  (fn_decl
+    name: (identifier)
+    params: (param_list
+      (param
+        name: (identifier)
+        type: (named_type
+          (identifier))))
+    return_type: (named_type
+      (identifier))
+    body: (block
+      (return_stmt
+        (identifier)))))
+
+==================
+pub on struct, enum, trait, alias and const
+==================
+
+pub struct Point
+  x: Int
+
+pub enum Colour
+  Red
+
+pub trait Show
+
+pub alias Id = Int
+
+pub const LIMIT = 10
+
+---
+
+(source_file
+  (struct_decl
+    name: (identifier)
+    body: (block
+      (struct_field
+        name: (identifier)
+        type: (named_type
+          (identifier)))))
+  (enum_decl
+    name: (identifier)
+    body: (event_variant_block
+      (event_variant
+        (identifier))))
+  (trait_decl
+    name: (identifier))
+  (alias_decl
+    name: (identifier)
+    value: (named_type
+      (identifier)))
+  (const_decl
+    name: (identifier)
+    value: (integer_literal)))

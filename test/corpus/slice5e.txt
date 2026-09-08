@@ -1,0 +1,110 @@
+==================
+tuple expression
+==================
+
+let p = (1, 2, 3)
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (tuple_expr
+      (integer_literal)
+      (integer_literal)
+      (integer_literal))))
+
+==================
+tuple pattern in match
+==================
+
+match pair
+    (a, b) => a
+    (_, _) => 0
+
+---
+
+(source_file
+  (expr_stmt
+    (match_expr
+      scrutinee: (identifier)
+      body: (match_block
+        (match_arm
+          pattern: (tuple_pattern
+            (identifier_pattern
+              (identifier))
+            (identifier_pattern
+              (identifier)))
+          body: (identifier))
+        (match_arm
+          pattern: (tuple_pattern
+            (wildcard_pattern)
+            (wildcard_pattern))
+          body: (integer_literal))))))
+
+==================
+state_machine with all three blocks
+==================
+
+state_machine Traffic
+    states
+        Red
+        Green
+
+    events
+        Tick
+
+    transitions
+        (Red, Tick) => Green
+
+---
+
+(source_file
+  (state_machine_decl
+    name: (identifier)
+    body: (state_machine_block
+      (states_block
+        body: (event_variant_block
+          (event_variant
+            (identifier))
+          (event_variant
+            (identifier))))
+      (events_block
+        body: (event_variant_block
+          (event_variant
+            (identifier))))
+      (transitions_block
+        body: (match_block
+          (match_arm
+            pattern: (tuple_pattern
+              (identifier_pattern
+                (identifier))
+              (identifier_pattern
+                (identifier)))
+            body: (identifier)))))))
+
+==================
+event variant with payload
+==================
+
+state_machine Door
+    events
+        Push
+        Open(p: Float)
+
+---
+
+(source_file
+  (state_machine_decl
+    name: (identifier)
+    body: (state_machine_block
+      (events_block
+        body: (event_variant_block
+          (event_variant
+            (identifier))
+          (event_variant
+            name: (identifier)
+            (param
+              name: (identifier)
+              type: (named_type
+                (identifier)))))))))

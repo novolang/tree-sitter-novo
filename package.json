@@ -1,0 +1,16 @@
+{
+  "name": "tree-sitter-novo",
+  "version": "0.1.0",
+  "description": "Tree-sitter grammar for the Novo programming language (slice 2 bootstrap).",
+  "license": "Apache-2.0",
+  "main": "bindings/node",
+  "tree-sitter": [
+    {
+      "scope": "source.novo",
+      "file-types": [
+        "nv"
+      ],
+      "highlights": "queries/highlights.scm"
+    }
+  ]
+}

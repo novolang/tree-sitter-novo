@@ -46,9 +46,17 @@ containing a block.
 Edit `grammar.js`, then:
 
 ```sh
-tree-sitter generate     # rewrites src/parser.c
-tree-sitter test         # the corpus must stay green
+tree-sitter generate --abi=14   # rewrites src/parser.c
+tree-sitter test                # the corpus must stay green
 ```
+
+**`--abi=14` is not optional.** The oldest consumer sets the ABI, not
+the newest. novo's own tree-sitter package links the *system*
+libtree-sitter, which on debian/ubuntu is 0.6.3 and accepts ABI 13–14;
+neovim accepts 14 too. `tree-sitter generate` defaults to 15, and an
+ABI-15 parser compiles, links, loads, and then fails
+`ts_parser_set_language` at runtime with "incompatible ABI". CI checks
+the committed value.
 
 Commit the regenerated `src/` along with the grammar — consumers build
 from the committed C, not from `grammar.js`.

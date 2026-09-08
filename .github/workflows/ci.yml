@@ -21,11 +21,26 @@ jobs:
       - name: The corpus must be green
         run: tree-sitter test
 
+      - name: The parser must stay on ABI 14
+        run: |
+          # The oldest consumer sets this, not the newest.  novo's own
+          # tree-sitter package links the SYSTEM libtree-sitter, which on
+          # debian/ubuntu is 0.6.3 and accepts ABI 13..14 only; neovim
+          # accepts 14 as well.  tree-sitter generate defaults to 15, so
+          # regenerating without --abi=14 produces a parser that builds,
+          # loads, and then fails ts_parser_set_language at runtime with
+          # "incompatible ABI".  That is how it broke once already.
+          abi=$(grep -m1 -oP '#define LANGUAGE_VERSION \K[0-9]+' src/parser.c)
+          if [ "$abi" != "14" ]; then
+            echo "src/parser.c is ABI $abi, expected 14 — regenerate with 'tree-sitter generate --abi=14'"
+            exit 1
+          fi
+
       - name: The committed parser must match grammar.js
         run: |
-          tree-sitter generate
+          tree-sitter generate --abi=14
           if ! git diff --quiet -- src/; then
-            echo "src/ is stale — run 'tree-sitter generate' and commit the result:"
+            echo "src/ is stale — run 'tree-sitter generate --abi=14' and commit the result:"
             git diff --stat -- src/
             exit 1
           fi

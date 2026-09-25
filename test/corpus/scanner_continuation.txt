@@ -140,3 +140,78 @@ fn f(c: Bool, x: Rec) -> Int
         (block
           (expr_stmt
             (integer_literal)))))))
+
+================================================================
+a raw-pointer store opens a block, it does not continue a line
+================================================================
+
+fn store(p: *Int, c: Bool) [hw]
+    if c
+        *p = 1
+        *p += 2
+
+----
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list
+      (param
+        (identifier)
+        (pointer_type
+          (named_type
+            (identifier))))
+      (param
+        (identifier)
+        (named_type
+          (identifier))))
+    (effect_list
+      (identifier))
+    (block
+      (if_stmt
+        (identifier)
+        (block
+          (expr_stmt
+            (assignment_stmt
+              (deref_target
+                (identifier))
+              (integer_literal)))
+          (expr_stmt
+            (assignment_stmt
+              (deref_target
+                (identifier))
+              (integer_literal))))))))
+
+================================================================
+a multiplication continued on the next line is still a continuation
+================================================================
+
+fn cont(a: Int, b: Int) -> Int
+    let x = a
+        * b
+    x
+
+----
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list
+      (param
+        (identifier)
+        (named_type
+          (identifier)))
+      (param
+        (identifier)
+        (named_type
+          (identifier))))
+    (named_type
+      (identifier))
+    (block
+      (let_stmt
+        (identifier)
+        (binary_expr
+          (identifier)
+          (identifier)))
+      (expr_stmt
+        (identifier)))))

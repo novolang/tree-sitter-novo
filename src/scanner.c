@@ -47,6 +47,8 @@ enum TokenType {
     NEWLINE,
     INDENT,
     DEDENT,
+    FSTRING_SEGMENT,
+    FSTRING_FORMAT,
 };
 
 typedef struct {
@@ -115,6 +117,78 @@ static inline void skip(TSLexer *lexer) {
     lexer->advance(lexer, true);
 }
 
+static inline bool is_op_char(int32_t c) {
+    return c == '=' || c == '<' || c == '>' || c == '!' || c == '+' ||
+           c == '-' || c == '*' || c == '/' || c == '%' || c == '&' ||
+           c == '|' || c == '^';
+}
+
+/* Is `run` an ASSIGNMENT operator?  `=` and the compound forms, and
+ * nothing that merely ends in `=`: `==`, `<=`, `>=` and `!=` compare,
+ * and `=>` does not end in `=` at all. */
+static bool op_run_is_assign(const char *run, unsigned n) {
+    if (n == 0 || run[n - 1] != '=') return false;
+    if (n == 2 && (run[0] == '=' || run[0] == '<' ||
+                   run[0] == '>' || run[0] == '!')) return false;
+    return true;
+}
+
+/* Does the rest of this SOURCE LINE carry an assignment outside every
+ * bracket, quote and comment?
+ *
+ * This is the question that separates the two constructs a
+ * statement-initial `*` can begin.  `* b + c` continues the expression
+ * on the line above; `*p = v` stores through a raw pointer, and no
+ * continuation line can carry a top-level assignment — the operator
+ * would have nothing to assign to.  The scanner reads the line rather
+ * than asking the parser what it expects, because the parser's
+ * expectations do not separate these: `valid_symbols[INDENT]` is true
+ * mid-expression as well (measured, seven files), and
+ * `valid_symbols[NEWLINE]` is true after `if c` because the grammar
+ * makes every body optional so that a truncated file still parses.
+ *
+ * Reads ahead and answers; the caller returns false either way when it
+ * decides the line is a continuation, and tree-sitter re-lexes from the
+ * token start, so nothing here is consumed on the parser's behalf. */
+static bool line_carries_assignment(TSLexer *lexer) {
+    int depth = 0;
+    char run[8];
+    for (;;) {
+        int32_t c = lexer->lookahead;
+        if (lexer->eof(lexer) || c == '\n' || c == '\r') return false;
+        if (c == '"' || c == '\'') {
+            int32_t quote = c;
+            advance(lexer);
+            while (!lexer->eof(lexer) && lexer->lookahead != quote &&
+                   lexer->lookahead != '\n' && lexer->lookahead != '\r') {
+                if (lexer->lookahead == '\\') advance(lexer);
+                if (lexer->eof(lexer)) return false;
+                advance(lexer);
+            }
+            if (lexer->lookahead == quote) advance(lexer);
+            continue;
+        }
+        if (c == '/') {
+            advance(lexer);
+            /* `//` opens a comment: the rest of the line is prose. */
+            if (lexer->lookahead == '/') return false;
+            continue;
+        }
+        if (c == '(' || c == '[' || c == '{') { depth++; advance(lexer); continue; }
+        if (c == ')' || c == ']' || c == '}') { depth--; advance(lexer); continue; }
+        if (is_op_char(c)) {
+            unsigned n = 0;
+            while (is_op_char(lexer->lookahead) && n < sizeof(run)) {
+                run[n++] = (char)lexer->lookahead;
+                advance(lexer);
+            }
+            if (depth <= 0 && op_run_is_assign(run, n)) return true;
+            continue;
+        }
+        advance(lexer);
+    }
+}
+
 bool tree_sitter_novo_external_scanner_scan(
     void *payload, TSLexer *lexer, const bool *valid_symbols
 ) {
@@ -140,6 +214,99 @@ bool tree_sitter_novo_external_scanner_scan(
             (unsigned)lexer->get_column(lexer));
 #endif
 
+    /* ── F-STRING CONTENT IS A SCANNED REGION ───────────────────────
+     * The text between the quotes of an f-string is scanned here
+     * rather than lexed as a token, and the difference is what `extras`
+     * can reach.  `extras` are matched between any two tokens, so with
+     * the segment lexed internally a comment spelling in that set was
+     * matched INSIDE a string: `"#${e.seq} say"` became a `#` comment
+     * that swallowed the rest of the line, closing quote and all, and
+     * `"${n:#x}"` broke the same way — `#` is a format-spec flag as
+     * well as a comment opener, and both are legitimately string
+     * content.  `token.immediate` on the segment was not enough: the
+     * extras set is still consulted at the position right after the
+     * opening quote.
+     *
+     * A scanned region has no such position.  The scanner is asked
+     * first at every byte where an external token is valid, and
+     * FSTRING_SEGMENT is valid exactly where string content may begin —
+     * after the opening quote, and after a `}` closes an interpolation.
+     * So the content is consumed whole, `extras` never runs inside it,
+     * and `#` is free to be a comment everywhere else.
+     *
+     * The two positions the grammar owns are left to it: `${` opens an
+     * interpolation and `"` closes the string, and the segment ends
+     * before each.
+     *
+     * The guard is tree-sitter's error recovery, which calls the
+     * scanner with EVERY symbol marked valid.  In that mode this branch
+     * would claim any byte anywhere, so it stands down and lets the
+     * indent tokens do what they do. */
+    if (valid_symbols[FSTRING_SEGMENT] &&
+        !(valid_symbols[NEWLINE] && valid_symbols[INDENT] &&
+          valid_symbols[DEDENT])) {
+        bool any = false;
+        for (;;) {
+            int32_t c = lexer->lookahead;
+            if (lexer->eof(lexer) || c == '"') break;
+            if (c == '\\') {
+                advance(lexer);
+                if (lexer->eof(lexer)) break;
+                advance(lexer);
+                any = true;
+                lexer->mark_end(lexer);
+                continue;
+            }
+            if (c == '$') {
+                advance(lexer);
+                /* `${` belongs to the grammar.  mark_end still points
+                 * before the `$`, so the segment ends there. */
+                if (lexer->lookahead == '{') break;
+                any = true;
+                lexer->mark_end(lexer);
+                continue;
+            }
+            advance(lexer);
+            any = true;
+            lexer->mark_end(lexer);
+        }
+        if (any) {
+            lexer->result_symbol = FSTRING_SEGMENT;
+            return true;
+        }
+        return false;
+    }
+
+    /* The format spec after `${expr:` is a region for the same reason
+     * and by the same mechanism.  It was the second half of the same
+     * defect: `#` is a spec flag (`"${n:#x}"` is hexadecimal with the
+     * `0x` prefix), and a spec lexed as a token leaves the position
+     * right after the `:` open to `extras` — the `}` that may follow an
+     * empty spec is not an immediate token, so the extras set is
+     * consulted there whatever the spec token says about itself.
+     *
+     * The spec is opaque to the grammar: everything up to the closing
+     * `}`.  An empty one is legal (`"${y:}"` is a hole with an empty
+     * spec, the split at the `:` being positional), which is the case
+     * that returns false and lets the `}` through. */
+    if (valid_symbols[FSTRING_FORMAT] &&
+        !(valid_symbols[NEWLINE] && valid_symbols[INDENT] &&
+          valid_symbols[DEDENT])) {
+        bool any = false;
+        while (!lexer->eof(lexer)) {
+            int32_t c = lexer->lookahead;
+            if (c == '}' || c == '"' || c == '\\') break;
+            advance(lexer);
+            any = true;
+            lexer->mark_end(lexer);
+        }
+        if (any) {
+            lexer->result_symbol = FSTRING_FORMAT;
+            return true;
+        }
+        return false;
+    }
+
     /* If the grammar is at EOF and we still have un-popped indents,
      * emit DEDENT tokens to close the open blocks cleanly. */
     if (lexer->eof(lexer)) {
@@ -149,6 +316,39 @@ bool tree_sitter_novo_external_scanner_scan(
             return true;
         }
         return false;
+    }
+
+    /* ── A CLOSING BRACKET ENDS THE BLOCK OPENED INSIDE IT ──────────
+     * `f(x =>` … `body)` and `f(match k` … `_ => 20)` write the
+     * bracket on the body's own last line.  Every other token that
+     * closes a block arrives after a newline, which is the only thing
+     * step 1 below reacts to, so the block stayed open and the bracket
+     * landed in a state that wanted a `_dedent`: the tree came back
+     * with `(MISSING _dedent)` and, for the lambda, a `(MISSING ")")`
+     * and an ERROR region around the whole call.
+     *
+     * A zero-width DEDENT here closes it exactly as a dedented line
+     * would.  `mark_end` above pins the token to this byte, so nothing
+     * is consumed and the bracket lexes normally afterwards.
+     *
+     * Self-limiting, and that is what stands in for the bracket-depth
+     * bookkeeping the canonical lexer keeps: one DEDENT per call, and
+     * the parser stops asking for another the moment the bracket
+     * itself becomes acceptable — so `f(g(match k` … `))` pops the two
+     * blocks it opened and neither of the brackets that opened none.
+     *
+     * The error-recovery guard is the FSTRING branches' guard above:
+     * tree-sitter re-runs the scanner with EVERY symbol marked valid,
+     * and in that mode this branch would pop the stack at any bracket
+     * anywhere. */
+    if ((lexer->lookahead == ')' || lexer->lookahead == ']' ||
+         lexer->lookahead == '}') &&
+        valid_symbols[DEDENT] && s->indents.size > 1 &&
+        !(valid_symbols[NEWLINE] && valid_symbols[INDENT] &&
+          valid_symbols[DEDENT])) {
+        array_pop(&s->indents);
+        lexer->result_symbol = DEDENT;
+        return true;
     }
 
     /* Only act on a newline boundary — the grammar is expected to
@@ -223,7 +423,25 @@ bool tree_sitter_novo_external_scanner_scan(
      *             + " window=…"
      *
      * Without this rule the lines starting with `+` would be
-     * unparseable (no rule starts with a binary operator). */
+     * unparseable (no rule starts with a binary operator).
+     *
+     * ONE OF THOSE LEADERS IS TWO CONSTRUCTS.  `*` begins a
+     * continuation (`* b + c`) and it begins a raw-pointer store
+     * (`*p = 1`), and the lookahead cannot tell them apart, so the
+     * store lost: it produced ERROR nodes in every position, and the
+     * enclosing `if` misparsed with it — `c`, `*p` and the next `*p`
+     * collapsed into one binary chain and the `if` ended up with a
+     * multi-line condition and no body.
+     *
+     * The line decides.  A continuation line cannot carry an
+     * assignment outside its brackets — a leading binary operator has
+     * nothing to assign to — so `line_carries_assignment` separates
+     * them, and it reads source rather than guessing from the parser's
+     * state.  Neither `valid_symbols[INDENT]` nor
+     * `valid_symbols[NEWLINE]` can do this: the first is true
+     * mid-expression as well, and the second is true after `if c`
+     * because the grammar makes every body optional so a truncated
+     * file still parses. */
     if (indent > top) {
         int32_t c = lexer->lookahead;
         if (c == '+' || c == '-' || c == '*' || c == '/' || c == '%' ||
@@ -232,7 +450,7 @@ bool tree_sitter_novo_external_scanner_scan(
             /* Don't consume — return false so the lexer treats the
              * whitespace+newline as extras and the binary operator
              * tokenises normally on the same logical line. */
-            return false;
+            if (c != '*' || !line_carries_assignment(lexer)) return false;
         }
     }
 

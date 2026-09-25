@@ -45,6 +45,40 @@ use ml.core as c
     (identifier)))
 
 ================================================================
+generic bound binding an effect parameter
+================================================================
+
+pub fn count_lines<S: Source[e]>(s: S) -> Int [e]
+    s.read_line()
+
+----
+
+(source_file
+  (fn_decl
+    (identifier)
+    (type_params
+      (type_param
+        (identifier)
+        (identifier)
+        (effect_list
+          (identifier))))
+    (param_list
+      (param
+        (identifier)
+        (named_type
+          (identifier))))
+    (named_type
+      (identifier))
+    (effect_list
+      (identifier))
+    (block
+      (expr_stmt
+        (call_expr
+          (field_access
+            (identifier)
+            (identifier)))))))
+
+================================================================
 impl with effect row
 ================================================================
 

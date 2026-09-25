@@ -1,0 +1,311 @@
+================================================================
+block lambda closing on its body's last line
+================================================================
+
+fn f(xs: [Int]) -> [Int]
+    xs.map(v =>
+        let d = v * 2
+        d + 1)
+
+----
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list
+      (param
+        (identifier)
+        (list_type
+          (named_type
+            (identifier)))))
+    (list_type
+      (named_type
+        (identifier)))
+    (block
+      (expr_stmt
+        (call_expr
+          (field_access
+            (identifier)
+            (identifier))
+          (closure_expr
+            (identifier)
+            (block
+              (let_stmt
+                (identifier)
+                (binary_expr
+                  (identifier)
+                  (integer_literal)))
+              (expr_stmt
+                (binary_expr
+                  (identifier)
+                  (integer_literal))))))))))
+
+================================================================
+block lambda closing on a dedented line of its own
+================================================================
+
+fn f(xs: [Int]) -> [Int]
+    xs.map(v =>
+        let d = v * 2
+        d + 1
+    )
+
+----
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list
+      (param
+        (identifier)
+        (list_type
+          (named_type
+            (identifier)))))
+    (list_type
+      (named_type
+        (identifier)))
+    (block
+      (expr_stmt
+        (call_expr
+          (field_access
+            (identifier)
+            (identifier))
+          (closure_expr
+            (identifier)
+            (block
+              (let_stmt
+                (identifier)
+                (binary_expr
+                  (identifier)
+                  (integer_literal)))
+              (expr_stmt
+                (binary_expr
+                  (identifier)
+                  (integer_literal))))))))))
+
+================================================================
+match as a call argument closing on the last arm's line
+================================================================
+
+fn f(k: Int) -> Int
+    take(match k
+        1 => 10
+        _ => 20)
+
+----
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list
+      (param
+        (identifier)
+        (named_type
+          (identifier))))
+    (named_type
+      (identifier))
+    (block
+      (expr_stmt
+        (call_expr
+          (identifier)
+          (match_expr
+            (identifier)
+            (match_block
+              (match_arm
+                (literal_pattern
+                  (integer_literal))
+                (integer_literal))
+              (match_arm
+                (wildcard_pattern)
+                (integer_literal)))))))))
+
+================================================================
+match as a call argument closing on a dedented line of its own
+================================================================
+
+fn f(k: Int) -> Int
+    take(match k
+        1 => 10
+        _ => 20
+    )
+
+----
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list
+      (param
+        (identifier)
+        (named_type
+          (identifier))))
+    (named_type
+      (identifier))
+    (block
+      (expr_stmt
+        (call_expr
+          (identifier)
+          (match_expr
+            (identifier)
+            (match_block
+              (match_arm
+                (literal_pattern
+                  (integer_literal))
+                (integer_literal))
+              (match_arm
+                (wildcard_pattern)
+                (integer_literal)))))))))
+
+================================================================
+match as a labelled call argument
+================================================================
+
+fn f(k: Int) -> Int
+    take(n: match k
+        1 => 10
+        _ => 20)
+
+----
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list
+      (param
+        (identifier)
+        (named_type
+          (identifier))))
+    (named_type
+      (identifier))
+    (block
+      (expr_stmt
+        (call_expr
+          (identifier)
+          (named_arg
+            (identifier)
+            (match_expr
+              (identifier)
+              (match_block
+                (match_arm
+                  (literal_pattern
+                    (integer_literal))
+                  (integer_literal))
+                (match_arm
+                  (wildcard_pattern)
+                  (integer_literal))))))))))
+
+================================================================
+two bracketed blocks closed by one bracket run
+================================================================
+
+fn f(k: Int, j: Int) -> Int
+    take(take(match k
+        1 => match j
+            2 => 3
+            _ => 4
+        _ => 5))
+
+----
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list
+      (param
+        (identifier)
+        (named_type
+          (identifier)))
+      (param
+        (identifier)
+        (named_type
+          (identifier))))
+    (named_type
+      (identifier))
+    (block
+      (expr_stmt
+        (call_expr
+          (identifier)
+          (call_expr
+            (identifier)
+            (match_expr
+              (identifier)
+              (match_block
+                (match_arm
+                  (literal_pattern
+                    (integer_literal))
+                  (match_expr
+                    (identifier)
+                    (match_block
+                      (match_arm
+                        (literal_pattern
+                          (integer_literal))
+                        (integer_literal))
+                      (match_arm
+                        (wildcard_pattern)
+                        (integer_literal)))))
+                (match_arm
+                  (wildcard_pattern)
+                  (integer_literal))))))))))
+
+================================================================
+a bracket that opened no block is untouched
+================================================================
+
+fn f(a: Int, m: [Int]) -> Int
+    let wrapped = add(1,
+        2)
+    let literal = [
+        1,
+        2
+    ]
+    let sub = m[
+        0
+    ]
+    let p = Point {
+        x: 1
+    }
+    wrapped
+
+----
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list
+      (param
+        (identifier)
+        (named_type
+          (identifier)))
+      (param
+        (identifier)
+        (list_type
+          (named_type
+            (identifier)))))
+    (named_type
+      (identifier))
+    (block
+      (let_stmt
+        (identifier)
+        (call_expr
+          (identifier)
+          (integer_literal)
+          (integer_literal)))
+      (let_stmt
+        (identifier)
+        (list_literal
+          (integer_literal)
+          (integer_literal)))
+      (let_stmt
+        (identifier)
+        (index_expr
+          (identifier)
+          (integer_literal)))
+      (let_stmt
+        (identifier)
+        (struct_literal
+          (identifier)
+          (struct_literal_field
+            (identifier)
+            (integer_literal))))
+      (expr_stmt
+        (identifier)))))

@@ -1,0 +1,233 @@
+==================
+static — addressable storage in BSS
+==================
+
+static HEAP : [u8; 4096]
+
+---
+
+(source_file
+  (static_decl
+    name: (identifier)
+    type: (fixed_array_type
+      element: (named_type
+        (identifier))
+      size: (integer_literal))))
+
+==================
+static at a fixed address
+==================
+
+static DMA : [u8; 256] at 0x20001000
+
+---
+
+(source_file
+  (static_decl
+    name: (identifier)
+    type: (fixed_array_type
+      element: (named_type
+        (identifier))
+      size: (integer_literal))
+    addr: (integer_literal)))
+
+==================
+system — the explicit-allocation block
+==================
+
+fn setup() [hw]
+    system
+        let xs = [1, 2, 3]
+
+---
+
+(source_file
+  (fn_decl
+    name: (identifier)
+    params: (param_list)
+    effects: (effect_list
+      (identifier))
+    body: (block
+      (system_stmt
+        body: (block
+          (let_stmt
+            name: (identifier)
+            value: (list_literal
+              (integer_literal)
+              (integer_literal)
+              (integer_literal))))))))
+
+==================
+asm — the one-liner form with clobbers
+==================
+
+fn nop() [hw]
+    asm cortex_m { "nop" } clobbers "memory"
+
+---
+
+(source_file
+  (fn_decl
+    name: (identifier)
+    params: (param_list)
+    effects: (effect_list
+      (identifier))
+    body: (block
+      (asm_stmt
+        arch: (identifier)
+        template: (string_literal)
+        (string_literal)))))
+
+==================
+peripheral — a register group
+==================
+
+peripheral UART0 at 0x40002000
+    register TXD at 0x51C : u32
+        field value : 8 @ 0
+
+---
+
+(source_file
+  (peripheral_decl
+    name: (identifier)
+    addr: (integer_literal)
+    body: (block
+      (register_decl
+        name: (identifier)
+        addr: (integer_literal)
+        type: (named_type
+          (identifier))
+        body: (field_decl_block
+          (field_decl
+            name: (identifier)
+            width: (integer_literal)
+            offset: (integer_literal)))))))
+
+==================
+memory_map — regions, sections and an entry point
+==================
+
+memory_map nrf52840
+    region FLASH at 0x00000000 size 1024K
+    section .text in FLASH
+    section .data in FLASH load_to RAM
+    entry_point Reset_Handler
+
+---
+
+(source_file
+  (memory_map_decl
+    name: (identifier)
+    body: (memory_map_block
+      (memory_region
+        name: (identifier)
+        base: (integer_literal)
+        size: (integer_literal)
+        unit: (identifier))
+      (memory_section
+        name: (section_name)
+        region: (identifier))
+      (memory_section
+        name: (section_name)
+        region: (identifier)
+        load_to: (identifier))
+      (entry_point_line
+        symbol: (identifier)))))
+
+==================
+vector_table — a slot and an irq source
+==================
+
+vector_table cortex_m at 0x00000000
+    reset Reset_Handler
+    irqs from bsp.nrf52840
+
+---
+
+(source_file
+  (vector_table_decl
+    arch: (identifier)
+    addr: (integer_literal)
+    body: (vector_table_block
+      (vector_slot
+        slot: (identifier)
+        handler: (identifier))
+      (vector_irqs
+        source: (module_path
+          (identifier)
+          (identifier))))))
+
+==================
+bsp — the board declaration
+==================
+
+bsp Nrf52840
+    arch "cortex_m4"
+    irq UART0 vector 2
+
+---
+
+(source_file
+  (bsp_decl
+    name: (identifier)
+    body: (bsp_block
+      (bsp_scalar
+        key: (identifier)
+        value: (string_literal))
+      (bsp_irq
+        name: (identifier)
+        slot: (integer_literal)))))
+
+==================
+bsp is also the stdlib module head
+==================
+
+fn main() [hw]
+    bsp.board.init()
+
+---
+
+(source_file
+  (fn_decl
+    name: (identifier)
+    params: (param_list)
+    effects: (effect_list
+      (identifier))
+    body: (block
+      (expr_stmt
+        (call_expr
+          callee: (field_access
+            value: (field_access
+              value: (bsp_ns)
+              field: (identifier))
+            field: (identifier)))))))
+
+==================
+pub is a visibility marker, not an identifier
+==================
+
+pub fn add(a: Int, b: Int) -> Int
+    a + b
+
+---
+
+(source_file
+  (fn_decl
+    name: (identifier)
+    params: (param_list
+      (param
+        name: (identifier)
+        type: (named_type
+          (identifier)))
+      (param
+        name: (identifier)
+        type: (named_type
+          (identifier))))
+    return_type: (named_type
+      (identifier))
+    body: (block
+      (expr_stmt
+        (binary_expr
+          (identifier)
+          (identifier))))))

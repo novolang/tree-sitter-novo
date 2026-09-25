@@ -1,0 +1,188 @@
+==================
+a slice with both bounds
+==================
+
+let b = a[1:3]
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (index_expr
+      value: (identifier)
+      index: (slice_expr
+        start: (integer_literal)
+        stop: (integer_literal)))))
+
+==================
+a slice with only the upper bound
+==================
+
+let b = a[:2]
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (index_expr
+      value: (identifier)
+      index: (slice_expr
+        stop: (integer_literal)))))
+
+==================
+a slice with only the lower bound
+==================
+
+let b = a[1:]
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (index_expr
+      value: (identifier)
+      index: (slice_expr
+        start: (integer_literal)))))
+
+==================
+a slice with no bounds copies the list
+==================
+
+let b = a[:]
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (index_expr
+      value: (identifier)
+      index: (slice_expr))))
+
+==================
+a step and no bounds reverses the list
+==================
+
+let b = a[::-1]
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (index_expr
+      value: (identifier)
+      index: (slice_expr
+        step: (unary_expr
+          (integer_literal))))))
+
+==================
+a slice with both bounds and a step
+==================
+
+let b = a[1:5:2]
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (index_expr
+      value: (identifier)
+      index: (slice_expr
+        start: (integer_literal)
+        stop: (integer_literal)
+        step: (integer_literal)))))
+
+==================
+a lower bound and a step with no upper bound
+==================
+
+let b = a[1::2]
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (index_expr
+      value: (identifier)
+      index: (slice_expr
+        start: (integer_literal)
+        step: (integer_literal)))))
+
+==================
+a second colon with no step
+==================
+
+let b = a[:3:]
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (index_expr
+      value: (identifier)
+      index: (slice_expr
+        stop: (integer_literal)))))
+
+==================
+negative bounds count from the end
+==================
+
+let b = a[-3:-1]
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (index_expr
+      value: (identifier)
+      index: (slice_expr
+        start: (unary_expr
+          (integer_literal))
+        stop: (unary_expr
+          (integer_literal))))))
+
+==================
+bounds that are expressions, and an index after the slice
+==================
+
+let b = a[n - 1:len(a)][0]
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (index_expr
+      value: (index_expr
+        value: (identifier)
+        index: (slice_expr
+          start: (binary_expr
+            (identifier)
+            (integer_literal))
+          stop: (call_expr
+            callee: (identifier)
+            (identifier))))
+      index: (integer_literal))))
+
+==================
+an index without a colon stays an index
+==================
+
+let b = a[i]
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (index_expr
+      value: (identifier)
+      index: (identifier))))

@@ -37,6 +37,16 @@ module.exports = grammar({
     $._newline,
     $._indent,
     $._dedent,
+    // The text between the quotes of an f-string, scanned rather than
+    // lexed.  `extras` are matched between any two tokens, so a lexed
+    // segment leaves a position inside every string where a comment
+    // spelling can win; a scanned region has none.  See the branch in
+    // src/scanner.c.
+    $.fstring_segment,
+    // And the format spec after `${expr:`, for the same reason: the
+    // `}` that may follow an empty spec is not an immediate token, so
+    // `extras` is consulted at the position right after the `:`.
+    $.fstring_format_spec,
   ],
 
   // Whitespace + newlines + comments — all "ignored" at this
@@ -55,6 +65,7 @@ module.exports = grammar({
   extras: $ => [
     /[ \t\r\n]+/,
     $.line_comment,
+    $.hash_comment,
     $.doc_comment,
     $.block_comment,
     $.shebang,
@@ -97,6 +108,15 @@ module.exports = grammar({
       $.impl_decl,
       $.state_machine_decl,
       $.register_decl,
+      // The embedded surface.  These five arrived with the hardware
+      // work and never reached this grammar, so `bsp Nrf52840` parsed
+      // as two identifiers and a board file was one long ERROR region.
+      // bugs/tooling/closed/treesitter-grammar-behind-lexer.md
+      $.peripheral_decl,
+      $.memory_map_decl,
+      $.vector_table_decl,
+      $.bsp_decl,
+      $.static_decl,
       $.error_kind_decl,
       $.req_decl,
       $.const_decl,
@@ -120,6 +140,11 @@ module.exports = grammar({
       $.while_stmt,
       $.loop_stmt,
       $.match_stmt,
+      // `system` and `asm` are statements, not declarations, but
+      // `_top_level` is what a `block` repeats, so this is where a
+      // fn-body construct is listed.
+      $.system_stmt,
+      $.asm_stmt,
       $.expr_stmt,
     ),
 
@@ -128,14 +153,16 @@ module.exports = grammar({
     // `///` and `//` share a prefix, so doc_comment carries the
     // higher precedence to win the disambiguation.
     //
-    // The reference lexer also discards `#` to end of line
-    // (compiler/lib/lexer.mll), which this grammar does NOT model.
-    // A `#` comment in the extras set is matched inside f-strings —
-    // `"#${e.seq} say"` becomes a comment that swallows the rest of
-    // the line — and `#` is a format-spec flag besides (`"${n:#x}"`).
-    // Exactly one file in the repo uses the spelling, so the trade
-    // favours f-strings.  See bugs/tooling/tree-sitter-hash-line-comment.md.
     line_comment: $ => token(prec(1, seq('//', /[^\n]*/))),
+
+    // `#` to end of line, which the reference lexer discards the same
+    // way it discards `//`.  It is safe in the extras set because an
+    // f-string's content is a scanned region and `extras` cannot enter
+    // one: `"#${e.seq} say"` is text and `"${n:#x}"` is a format spec,
+    // both of which a lexed segment lost to this rule.  `shebang`
+    // carries a higher precedence, so `#!/usr/bin/env novo` on line one
+    // is still a shebang.
+    hash_comment: $ => token(seq('#', /[^\n]*/)),
     doc_comment: $ => token(prec(2, seq('///', /[^\n]*/))),
 
     // `/* ... */` block comment.  Used at the head of many real
@@ -169,13 +196,7 @@ module.exports = grammar({
     // spelling of what a type parameter is and the locals query that
     // scopes a struct's parameters covers this too.
     alias_decl: $ => seq(
-      optional(field('attrs', repeat1($.attribute))),
-      // `pub` marks the declaration part of the package's public
-      // surface.  It was missing entirely until 2026-09-08, which
-      // did not read as an error: `pub` matched the identifier rule,
-      // so every public declaration silently parsed as a bare
-      // expression statement followed by the declaration.
-      optional(field('visibility', 'pub')),
+      attrsAndPub($),
       'alias',
       field('name', $.identifier),
       optional(field('type_params', $.type_params)),
@@ -225,13 +246,7 @@ module.exports = grammar({
     // @ffi decl).  This is what unlocks `vaf` (visual select around
     // function) in nvim-treesitter-textobjects.
     fn_decl: $ => prec.right(seq(
-      optional(field('attrs', repeat1($.attribute))),
-      // `pub` marks the declaration part of the package's public
-      // surface.  It was missing entirely until 2026-09-08, which
-      // did not read as an error: `pub` matched the identifier rule,
-      // so every public declaration silently parsed as a bare
-      // expression statement followed by the declaration.
-      optional(field('visibility', 'pub')),
+      attrsAndPub($),
       // Modifiers: `async fn`, `const fn`, or both.
       optional(choice('async', 'const')),
       'fn',
@@ -297,9 +312,15 @@ module.exports = grammar({
       prec.dynamic(2, seq('[', sepBy1(',', $.type_param), ']')),
     ),
 
+    // A bound may carry an EFFECT ARGUMENT — `<S: Source[e]>` binds the
+    // trait's effect parameter for the enclosing function, which may
+    // then write `[e]` in its own effect row (SPEC §5.6).  The argument
+    // reuses `effect_list`, so the bracketed name is the same node the
+    // row itself is made of and no new node type enters the ABI.
     type_param: $ => prec.right(seq(
       $.identifier,
-      optional(seq(':', sepBy1('+', $.identifier))),
+      optional(seq(':', sepBy1('+',
+        seq($.identifier, optional(field('effects', $.effect_list)))))),
     )),
 
     param_list: $ => seq(
@@ -338,13 +359,7 @@ module.exports = grammar({
     // path.  `block` is reused — it just allows `_top_level`
     // entries which already covers both cases at this slice.
     struct_decl: $ => prec.right(seq(
-      optional(field('attrs', repeat1($.attribute))),
-      // `pub` marks the declaration part of the package's public
-      // surface.  It was missing entirely until 2026-09-08, which
-      // did not read as an error: `pub` matched the identifier rule,
-      // so every public declaration silently parsed as a bare
-      // expression statement followed by the declaration.
-      optional(field('visibility', 'pub')),
+      attrsAndPub($),
       'struct',
       field('name', $.identifier),
       optional(field('type_params', $.type_params)),
@@ -359,13 +374,7 @@ module.exports = grammar({
     // would parse them as `expr_stmt(call_expr(named_arg))` and
     // named_arg's value position rejects `?T`.
     enum_decl: $ => prec.right(seq(
-      optional(field('attrs', repeat1($.attribute))),
-      // `pub` marks the declaration part of the package's public
-      // surface.  It was missing entirely until 2026-09-08, which
-      // did not read as an error: `pub` matched the identifier rule,
-      // so every public declaration silently parsed as a bare
-      // expression statement followed by the declaration.
-      optional(field('visibility', 'pub')),
+      attrsAndPub($),
       'enum',
       field('name', $.identifier),
       optional(field('type_params', $.type_params)),
@@ -531,6 +540,183 @@ module.exports = grammar({
       ':',
       field('width', $.integer_literal),
       optional(seq('@', field('offset', $.integer_literal))),
+    )),
+
+    // ── the embedded surface ───────────────────────────────────
+    // Five declarations and two statements that the reference lexer
+    // reserves and this grammar did not know.  A missing keyword here
+    // is not a parse ERROR — the word matches the identifier rule, so
+    // `bsp Nrf52840` parsed as two identifiers and `has_error()` was
+    // false, which is what made the drift invisible to the corpus
+    // tests.  bugs/tooling/closed/treesitter-grammar-behind-lexer.md
+    //
+    // `peripheral UART0 at 0x40002000` — a register group.  The body
+    // is register decls, which already have a rule.
+    peripheral_decl: $ => prec.right(seq(
+      'peripheral',
+      field('name', $.identifier),
+      optional(seq('at', field('addr', $._expr))),
+      optional(field('body', $.block)),
+    )),
+
+    // `memory_map nrf52840` — regions and section placements for the
+    // linker.  The member keywords (`region`, `section`, `at`, `size`,
+    // `in`, `load_to`, `pad_to`, `entry_point`) are contextual IDENTs
+    // in the reference parser, so they are spelled here rather than
+    // reserved.
+    memory_map_decl: $ => prec.right(seq(
+      'memory_map',
+      optional(field('name', $.identifier)),
+      optional(field('body', $.memory_map_block)),
+    )),
+
+    memory_map_block: $ => seq(
+      $._indent,
+      repeat(choice(
+        $.memory_region,
+        $.memory_section,
+        $.entry_point_line,
+      )),
+      $._dedent,
+    ),
+
+    // `region FLASH at 0x00000000 size 512K` — the size may carry a
+    // K / M / G suffix, which lexes as an integer followed by an
+    // identifier.
+    memory_region: $ => prec.right(seq(
+      'region',
+      field('name', $.identifier),
+      'at', field('base', $._expr),
+      'size', field('size', $._expr),
+      optional(field('unit', $.identifier)),
+    )),
+
+    // `section .text in FLASH`, `... load_to RAM`, `... pad_to 0x100`.
+    memory_section: $ => prec.right(seq(
+      'section',
+      field('name', $.section_name),
+      'in', field('region', $.identifier),
+      optional(choice(
+        seq('load_to', field('load_to', $.identifier)),
+        seq('pad_to', field('pad_to', $._expr)),
+      )),
+    )),
+
+    // `.text`, `.ARM.exidx` — a dotted name that does not start with
+    // an identifier character, so it needs its own token.
+    section_name: $ => token(seq('.', /[A-Za-z_][A-Za-z0-9_]*/,
+                                 repeat(seq('.', /[A-Za-z_][A-Za-z0-9_]*/)))),
+
+    entry_point_line: $ => prec.right(seq(
+      'entry_point',
+      field('symbol', $.identifier),
+    )),
+
+    // `vector_table cortex_m at 0x00000000` — ARM-defined slots, then
+    // either `irqs from bsp.<chip>` or an inline `irqs a = 1, b = 2`.
+    vector_table_decl: $ => prec.right(seq(
+      'vector_table',
+      field('arch', $.identifier),
+      optional(seq('at', field('addr', $._expr))),
+      optional(field('body', $.vector_table_block)),
+    )),
+
+    vector_table_block: $ => seq(
+      $._indent,
+      repeat(choice($.vector_slot, $.vector_irqs)),
+      $._dedent,
+    ),
+
+    // `reset  Reset_Handler` — a slot name and the symbol it maps to.
+    vector_slot: $ => prec.right(seq(
+      field('slot', $.identifier),
+      field('handler', $.identifier),
+    )),
+
+    vector_irqs: $ => prec.right(seq(
+      'irqs',
+      choice(
+        seq('from', field('source', $.module_path)),
+        sepBy1(',', seq(field('name', $.identifier), '=',
+                        field('slot', $.integer_literal))),
+      ),
+    )),
+
+    // `bsp Nrf52840` — the board, in one declaration: scalars, a
+    // nested memory_map, nested peripherals and `irq N vector M`
+    // lines.
+    // The precedence is what tells `bsp Nrf52840` (a declaration)
+    // from `bsp.board.init()` (the stdlib module head, `bsp_ns`
+    // below): the two collide on `bsp` followed by an identifier, and
+    // a declaration is what that is — the namespace form always has a
+    // `.` next.
+    bsp_decl: $ => prec.right(1, seq(
+      'bsp',
+      field('name', $.identifier),
+      optional(field('body', $.bsp_block)),
+    )),
+
+    bsp_block: $ => seq(
+      $._indent,
+      repeat(choice(
+        $.bsp_scalar,
+        $.bsp_irq,
+        $.memory_map_decl,
+        $.peripheral_decl,
+      )),
+      $._dedent,
+    ),
+
+    // `arch "cortex_m4"`, `cpu_clock_hz 64000000` — the field names
+    // are contextual IDENTs in the reference parser.
+    bsp_scalar: $ => prec.right(seq(
+      field('key', $.identifier),
+      field('value', choice($.string_literal, $.integer_literal)),
+    )),
+
+    bsp_irq: $ => prec.right(seq(
+      'irq',
+      field('name', $.identifier),
+      'vector',
+      field('slot', $.integer_literal),
+    )),
+
+    // `static BUF : [u8; 4096]`, optionally `at 0x2000_0000` —
+    // addressable storage in BSS or at a fixed address.  Only
+    // `[u8; N]` is accepted by the reference parser; the grammar
+    // takes any array type so a wrong width highlights as Novo and
+    // is refused by the compiler rather than by the editor.
+    static_decl: $ => prec.right(seq(
+      attrsAndPub($),
+      'static',
+      field('name', $.identifier),
+      ':',
+      field('type', $._type_expr),
+      optional(seq('at', field('addr', $._expr))),
+    )),
+
+    // `system` — the explicit-allocation block at @tier(embedded).
+    system_stmt: $ => prec.right(seq(
+      'system',
+      optional(field('body', $.block)),
+    )),
+
+    // Inline asm, both spellings the reference parser takes:
+    //   asm cortex_m { "nop" } clobbers "memory", "cc"
+    //   asm cortex_m
+    //       """bkpt #0xAB"""
+    //       input  op = X @ "{r0}"
+    // The operand keywords are contextual IDENTs, so the block form is
+    // a run of lines rather than a spelled-out member list.
+    asm_stmt: $ => prec.right(seq(
+      'asm',
+      field('arch', $.identifier),
+      choice(
+        seq('{', field('template', $.string_literal), '}',
+            optional(seq('clobbers',
+                         sepBy1(',', $.string_literal)))),
+        optional(field('body', $.block)),
+      ),
     )),
 
     state_machine_block: $ => seq(
@@ -705,17 +891,34 @@ module.exports = grammar({
     // dynamic_prec keeps the parser from trying assignment_stmt
     // when the LHS is anything but a plain identifier or
     // field/index access.
-    // The raw-pointer store `*p = v` is absent from the target set
-    // on purpose: a statement-initial `*` is claimed by the external
-    // scanner's leading-operator continuation rule before the parser
-    // sees it, so a target rule here could never fire.  Reading
-    // through a pointer (`1 + *p`) is unaffected and works.
-    // See bugs/tooling/tree-sitter-deref-store-statement.md.
+    // `*p = v` stores through a raw pointer, and `deref_target` is
+    // its target.  It reaches the parser because the external
+    // scanner's continuation rule is gated on the previous line
+    // having been one the parser would accept as finished — a
+    // statement-initial `*` under a header that still owes a body is
+    // a store, not the middle of a wrapped expression.  Reading
+    // through a pointer (`1 + *p`) goes through unary_expr and is
+    // unaffected.
     assignment_stmt: $ => prec.dynamic(1, seq(
-      field('target', choice($.identifier, $.field_access, $.index_expr)),
+      field('target', choice($.identifier, $.field_access, $.index_expr,
+                             $.deref_target)),
       field('op', choice('=', '+=', '-=', '*=', '/=', '%=',
                          '|=', '&=', '^=', '<<=', '>>=', '>>>=')),
       field('value', $._expr),
+    )),
+
+    // The target of a raw-pointer store.  Its own rule rather than a
+    // reuse of `unary_expr` so a highlight query can colour a store
+    // target differently from a read, and so the `*` binds exactly one
+    // postfix chain: `*p.next = v` stores through `p.next`.
+    // The operand is a PLACE rather than an arbitrary expression:
+    // `*p`, `*p.next`, `*xs[i]`, `**pp`.  Taking `$._expr` here makes
+    // `'*' identifier '=>' identifier` ambiguous against a closure
+    // body that is itself an assignment, and the wider rule buys
+    // nothing — nothing else is storable.
+    deref_target: $ => prec(11, seq(
+      '*',
+      choice($.identifier, $.field_access, $.index_expr, $.deref_target),
     )),
 
     // ── Control-flow statement headers (slice 5b) ────────────────
@@ -1083,8 +1286,20 @@ module.exports = grammar({
       $.none_literal,
       $.self_expr,
       $.null_expr,
+      $.bsp_ns,
       $.identifier,
     ),
+
+    // `bsp.board.init()`.  `bsp` is a reserved word — it opens the
+    // board declaration — AND it is the head of the `bsp.*` stdlib
+    // module, which the reference parser admits explicitly
+    // (`| BSP { EVar ("bsp", …) }` in parser.mly).  Without this the
+    // grammar reads the word as the start of a declaration and the
+    // call is an ERROR, which is what adding the keyword cost until
+    // the escape came with it.  The other six embedded keywords have
+    // no such escape in the reference parser, so none is given one
+    // here.
+    bsp_ns: $ => 'bsp',
 
     // `match scrutinee\n    arm => ...` as an expression — used in
     // `let x = match ...` and similar.  Same shape as match_stmt
@@ -1277,12 +1492,30 @@ module.exports = grammar({
       field('value', $._expr),
     )),
 
+    // `a[i]` is an index and `a[lo:hi:step]` a slice.  They share the
+    // `value [` prefix, and the colon decides between them, so a slice
+    // is the index's `index` child rather than a node of its own around
+    // the whole postfix: an editor query that walks index_expr sees
+    // both, and one that only wants slices asks for slice_expr.
     index_expr: $ => prec.left(14, seq(
       field('value', $._expr),
       '[',
-      field('index', $._expr),
+      field('index', choice($._expr, $.slice_expr)),
       ']',
     )),
+
+    // The inside of `a[lo:hi]`, `a[:hi]`, `a[lo:]`, `a[:]` and, with a
+    // second colon, `a[lo:hi:step]` — SPEC § 6 "Slicing".  Every part
+    // may be left out, so the one colon is the only token a slice
+    // always has; `a[::-1]` is two colons with a step and no bounds.
+    // It is only ever reached from index_expr, since a slice outside
+    // brackets is not Novo.
+    slice_expr: $ => seq(
+      optional(field('start', $._expr)),
+      ':',
+      optional(field('stop', $._expr)),
+      optional(seq(':', optional(field('step', $._expr)))),
+    ),
 
     // `.` and `?.` (safe-navigation) field access.
     field_access: $ => prec.left(14, seq(
@@ -1419,23 +1652,11 @@ module.exports = grammar({
     _fstring_open:  $ => '"',
     _fstring_close: $ => token.immediate('"'),
 
-    // Plain text inside an f-string between `${...}` interps.
-    // Matches the same set of byte sequences as string_literal
-    // does, but as a non-atomic chunk that can repeat alongside
-    // fstring_interp.
-    //
-    // Immediate, and so are the `${` and closing `"` around it:
-    // everything between the quotes is string content, and extras
-    // must never be skipped there.  A non-immediate segment lets the
-    // lexer run the extras set first, which both eats leading spaces
-    // out of the segment token and lets a `#` open a comment that
-    // swallows the rest of the line — `"#${e.seq} say"` is text, not
-    // a comment.
-    fstring_segment: $ => token.immediate(repeat1(choice(
-      /[^"\\$]/,
-      /\\./,
-      /\$[^{"]/,
-    ))),
+    // `fstring_segment` — the plain text inside an f-string between
+    // `${...}` interps — is an EXTERNAL token.  See `externals` at the
+    // top of this file and the scanned-region branch in
+    // src/scanner.c: a region is the only shape `extras` cannot enter,
+    // and everything between the quotes is string content.
 
     fstring_interp: $ => seq(
       token.immediate('${'),
@@ -1447,17 +1668,52 @@ module.exports = grammar({
       '}',
     ),
 
-    // Format spec follows `:` inside `${expr:fmt}` — opaque chars
-    // until the closing `}`.  Examples: `5` (right-align width 5),
-    // `<5` (left-align), `^5` (center), `0.2f`.  Slice 5j may
-    // structurally parse the spec; today it's a single token.
-    fstring_format_spec: $ => token.immediate(/[^}"\\]+/),
+    // `fstring_format_spec` — the opaque run after `:` inside
+    // `${expr:fmt}`, up to the closing `}` — is an EXTERNAL token, for
+    // the same reason `fstring_segment` is.  Examples: `5`
+    // (right-align width 5), `<5` (left-align), `^5` (center), `0.2f`,
+    // `#x` (hexadecimal with the prefix).  Slice 5j may structurally
+    // parse the spec; today it is one region.
 
     bool_literal: $ => choice('true', 'false'),
 
     none_literal: $ => 'None',
   },
 });
+
+// Annotations and `pub`, in either order, for a declaration that takes
+// both.
+//
+// `pub` marks the declaration part of the package's public surface.  It
+// was missing from this grammar entirely until 2026-09-08, which did
+// not read as an error: `pub` matched the identifier rule, so every
+// public declaration silently parsed as a bare expression statement
+// followed by the declaration.
+//
+// The two may be written in EITHER order, and a run of annotations on
+// each side concatenates - the reference reads `PUB decl` and
+// `annotation_list PUB decl` alike.  This grammar accepted only
+// annotations BEFORE `pub`, so `pub @value` - which is the form
+// `novo fmt` prints, and therefore the form nearly every annotated
+// `pub` declaration in the tree is written in - fell back to the same
+// silent mis-parse `pub` itself used to.
+//
+// Written as a `choice` rather than two adjacent `optional(repeat1(...))`
+// because those are ambiguous when `pub` is absent: `tree-sitter
+// generate` refuses them with "Unresolved conflict for symbol sequence:
+// <decl>_repeat1 <decl>_repeat1".  With the `pub` between them there is
+// one split point and no ambiguity, and the no-`pub` branch carries a
+// single run.
+function attrsAndPub($) {
+  return choice(
+    seq(
+      optional(field('attrs', repeat1($.attribute))),
+      field('visibility', 'pub'),
+      optional(field('attrs', repeat1($.attribute))),
+    ),
+    optional(field('attrs', repeat1($.attribute))),
+  );
+}
 
 function sepBy1(sep, rule) {
   return seq(rule, repeat(seq(sep, rule)));

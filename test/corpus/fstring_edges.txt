@@ -79,3 +79,46 @@ fn pad() -> Str
           (fstring_interp
             (identifier))
           (fstring_segment))))))
+
+================================================================
+a hash line comment is a comment, like the reference lexer's
+================================================================
+
+# a whole-line comment
+fn f(n: Int) -> Str
+    let a = "#${n} literal hash"   # a trailing comment
+    let b = "${n:#x}"
+    a + b
+
+----
+
+(source_file
+  (hash_comment)
+  (fn_decl
+    (identifier)
+    (param_list
+      (param
+        (identifier)
+        (named_type
+          (identifier))))
+    (named_type
+      (identifier))
+    (block
+      (let_stmt
+        (identifier)
+        (fstring_literal
+          (fstring_segment)
+          (fstring_interp
+            (identifier))
+          (fstring_segment)))
+      (hash_comment)
+      (let_stmt
+        (identifier)
+        (fstring_literal
+          (fstring_interp
+            (identifier)
+            (fstring_format_spec))))
+      (expr_stmt
+        (binary_expr
+          (identifier)
+          (identifier))))))

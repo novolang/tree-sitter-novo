@@ -93,6 +93,10 @@ module.exports = grammar({
     // both alive; dynamic_prec on closure_expr resolves at runtime
     // against match_arm.
     [$._expr, $.closure_expr],
+    // `let (a, b) = e` against `let (P, Q) = e else B`: a tuple of
+    // names is a binder or a pattern, and only the `else` after the
+    // value decides which.
+    [$.tuple_binder, $._pattern],
   ],
 
   rules: {
@@ -144,6 +148,7 @@ module.exports = grammar({
       // `_top_level` is what a `block` repeats, so this is where a
       // fn-body construct is listed.
       $.system_stmt,
+      $.wrapping_stmt,
       $.asm_stmt,
       $.expr_stmt,
     ),
@@ -204,7 +209,8 @@ module.exports = grammar({
       field('value', $._type_expr),
     ),
 
-    // `use a.b`, `use a.b as c`, `use a.{b, c}`, `use a.*`.
+    // `use a.b`, `use a.b as c`, `use a.{b, c}`, `use a.{b as d}`,
+    // `use a.*`.
     // The brace and glob forms are the package-loader spellings
     // (SPEC §9.3); the plain dotted form works everywhere.
     use_decl: $ => prec.right(seq(
@@ -223,11 +229,20 @@ module.exports = grammar({
     )),
 
     // `{core, cpu, loader}` — the brace-selection tail of a use path.
+    // A name may be renamed at the import: `{ Said as HubSaid }`.
     import_group: $ => seq(
       '{',
-      sepBy1(',', $.identifier),
+      sepBy1(',', choice($.identifier, $.import_rename)),
       optional(','),
       '}',
+    ),
+
+    // `Said as HubSaid` — the name as the module declares it, and the
+    // name this module writes for it (SPEC §9.3).
+    import_rename: $ => seq(
+      field('name', $.identifier),
+      'as',
+      field('alias', $.identifier),
     ),
 
     // `*` — the glob tail of a use path.
@@ -253,7 +268,7 @@ module.exports = grammar({
       field('name', $.identifier),
       optional(field('type_params', $.type_params)),
       field('params', $.param_list),
-      optional(field('return_type', seq('->', $._type_expr))),
+      optional(field('return_type', seq('->', choice($.readonly_type, $._type_expr)))),
       optional(field('effects', $.effect_list)),
       optional(field('body', $.block)),
     )),
@@ -520,10 +535,14 @@ module.exports = grammar({
     //   register NAME at 0x40001000 : u32
     //       field foo : 1
     //       field bar : 2 @ 8     (with explicit bit offset)
+    // and the computed-address array an SVD import writes:
+    //   register CNF[32] at 0x700 stride 4 : u32
     register_decl: $ => prec.right(seq(
       'register',
       field('name', $.identifier),
+      optional(seq('[', field('count', $.integer_literal), ']')),
       optional(seq('at', field('addr', $._expr))),
+      optional(seq('stride', field('stride', $.integer_literal))),
       optional(seq(':', field('type', $._type_expr))),
       optional(field('body', $.field_decl_block)),
     )),
@@ -661,11 +680,61 @@ module.exports = grammar({
       repeat(choice(
         $.bsp_scalar,
         $.bsp_irq,
+        $.bsp_board,
+        $.bsp_devices,
         $.memory_map_decl,
         $.peripheral_decl,
       )),
       $._dedent,
     ),
+
+    // `board` — the pin catalogue, one `<name> <pin>` line each, which
+    // a program reads as `bsp.board.<name>()`.  The reference parser
+    // reads `board` and `devices` as contextual IDENTs followed by an
+    // indented block; the keyword here only applies inside a `bsp`
+    // body, so `bsp.board.init()` keeps `board` a field name.
+    bsp_board: $ => seq(
+      'board',
+      $._indent,
+      repeat($.bsp_pin),
+      $._dedent,
+    ),
+
+    bsp_pin: $ => prec.right(seq(
+      field('name', $.identifier),
+      field('pin', $.integer_literal),
+    )),
+
+    // `devices` — the chips on the board's buses, one named device per
+    // line:
+    //   <name> <DriverType> from "<package>" on <i2cN|spiN>
+    //          [addr <n>] [cs <pin>] [irq <pin>]
+    // Every word after the package opens with its keyword, so a line
+    // ends where the next device's name begins.  The words may come in
+    // any order, as the reference parser takes them; which ones a bus
+    // requires is the compiler's check, not the editor's.
+    bsp_devices: $ => seq(
+      'devices',
+      $._indent,
+      repeat($.bsp_device),
+      $._dedent,
+    ),
+
+    bsp_device: $ => prec.right(seq(
+      field('name', $.identifier),
+      field('driver', $.identifier),
+      'from',
+      field('package', $.string_literal),
+      repeat(choice(
+        seq('on', field('bus', $.identifier)),
+        seq('addr', field('addr', $.integer_literal)),
+        seq('cs', field('cs', $._bsp_pin_ref)),
+        seq('irq', field('irq', $._bsp_pin_ref)),
+      )),
+    )),
+
+    // A pin: the chip's number, or a name of the `board` block.
+    _bsp_pin_ref: $ => choice($.integer_literal, $.identifier),
 
     // `arch "cortex_m4"`, `cpu_clock_hz 64000000` — the field names
     // are contextual IDENTs in the reference parser.
@@ -674,11 +743,14 @@ module.exports = grammar({
       field('value', choice($.string_literal, $.integer_literal)),
     )),
 
+    // `irq UARTE0_UART0 vector 2 alias UARTE0, UART0` — the alias
+    // names are further names `@isr(...)` accepts for the same line.
     bsp_irq: $ => prec.right(seq(
       'irq',
       field('name', $.identifier),
       'vector',
       field('slot', $.integer_literal),
+      optional(seq('alias', sepBy1(',', field('alias', $.identifier)))),
     )),
 
     // `static BUF : [u8; 4096]`, optionally `at 0x2000_0000` —
@@ -699,6 +771,18 @@ module.exports = grammar({
     system_stmt: $ => prec.right(seq(
       'system',
       optional(field('body', $.block)),
+    )),
+
+    // `wrapping` — a block whose `Int` arithmetic wraps instead of
+    // trapping (SPEC § 13.2).  The reference lexer makes the word a
+    // keyword only alone on its line, and a name everywhere else.  Here
+    // the keyword token is also an expression (`wrapping_name` below),
+    // so what follows the word decides: an indented block on the next
+    // line makes this statement, and anything on the same line, such as
+    // the `(` of a call, makes the word a name.
+    wrapping_stmt: $ => prec.right(seq(
+      'wrapping',
+      field('body', $.block),
     )),
 
     // Inline asm, both spellings the reference parser takes:
@@ -793,25 +877,61 @@ module.exports = grammar({
 
     // ── let statement ──────────────────────────────────────────
     // The binder is a name or a parenthesised positional tuple
-    // destructure — `let (client, _) = pair`.  The reference grammar's
-    // `let_tuple_stmt` (compiler/lib/parser.mly) has no type
-    // annotation and no `var` / `mut` form, so the destructure is a
-    // separate alternative rather than a widened `name` field.
+    // destructure — `let (client, _) = pair`, or `var (a, b) = f()`
+    // with writable names.  The reference grammar's `let_tuple_stmt`
+    // (compiler/lib/parser.mly) has no type annotation and no `mut`
+    // form, so the destructure is a separate alternative rather than a
+    // widened `name` field.
     let_stmt: $ => choice(
       seq(
         choice('let', 'var'),
         optional('mut'),
-        field('name', $.identifier),
+        // `_` lexes as its own token wherever a pattern may start, and
+        // the `else` form below lets one start here.
+        field('name', choice($.identifier, $.wildcard_pattern)),
         optional(seq(':', field('type', $._type_expr))),
         '=',
         field('value', $._expr),
       ),
       seq(
-        'let',
+        choice('let', 'var'),
         field('name', $.tuple_binder),
         '=',
         field('value', $._expr),
       ),
+      // `let P = e else B` — a pattern that can fail, then a block that
+      // leaves, written below or as one statement on the
+      // same line (`else return None`).  Told apart from the two
+      // forms above by the `else`.
+      prec.right(seq(
+        choice('let', 'var'),
+        field('pattern', $._let_else_pattern),
+        '=',
+        field('value', $._expr),
+        'else',
+        optional(field('else', choice(
+          $.block,
+          $.return_stmt,
+          $.break_stmt,
+          $.continue_stmt,
+          $._expr,
+        ))),
+      )),
+    ),
+
+    // The patterns `let … else` takes: every pattern but a bare name,
+    // `_` and a literal, which begin a plain `let` or no statement at
+    // all.  Admitting them made every `let x = e` and `let _ = e` a
+    // candidate for the `else` form, and the parser chose it and then
+    // reported the `else` missing.
+    _let_else_pattern: $ => choice(
+      $.or_pattern,
+      $.as_pattern,
+      $.tuple_pattern,
+      $.struct_pattern,
+      $.list_pattern,
+      $.cons_pattern,
+      $.constructor_pattern,
     ),
 
     // `(a, _)` in `let` binding position.  `_` is a binder here
@@ -900,8 +1020,8 @@ module.exports = grammar({
     // through a pointer (`1 + *p`) goes through unary_expr and is
     // unaffected.
     assignment_stmt: $ => prec.dynamic(1, seq(
-      field('target', choice($.identifier, $.field_access, $.index_expr,
-                             $.deref_target)),
+      field('target', choice($.identifier, alias($._wrapping_name, $.identifier),
+                             $.field_access, $.index_expr, $.deref_target)),
       field('op', choice('=', '+=', '-=', '*=', '/=', '%=',
                          '|=', '&=', '^=', '<<=', '>>=', '>>>=')),
       field('value', $._expr),
@@ -942,9 +1062,19 @@ module.exports = grammar({
     continue_stmt: $ => 'continue',
     pass_stmt: $ => 'pass',
 
+    // `if cond`, or `if let P = e` / `if var P = e`, which runs the
+    // body with the pattern's names bound when the value matches.
     if_stmt: $ => prec.right(seq(
       'if',
-      field('condition', $._expr),
+      choice(
+        field('condition', $._expr),
+        seq(
+          field('binding', choice('let', 'var')),
+          field('pattern', $._pattern),
+          '=',
+          field('value', $._expr),
+        ),
+      ),
       optional(field('body', $.block)),
     )),
 
@@ -1235,6 +1365,15 @@ module.exports = grammar({
       '>',
     )),
 
+    // `readonly [T]` and `readonly Bytes` — a function's answer that the
+    // caller may read and never writes through (SPEC §4.3).  Only a
+    // return type takes the word, and `readonly` is not reserved, so
+    // it stays an identifier everywhere else.
+    readonly_type: $ => seq(
+      'readonly',
+      choice($.list_type, $.named_type),
+    ),
+
     optional_type: $ => seq('?', $._type_expr),
 
     list_type: $ => seq('[', $._type_expr, ']'),
@@ -1287,6 +1426,7 @@ module.exports = grammar({
       $.self_expr,
       $.null_expr,
       $.bsp_ns,
+      alias($._wrapping_name, $.identifier),
       $.identifier,
     ),
 
@@ -1300,6 +1440,13 @@ module.exports = grammar({
     // no such escape in the reference parser, so none is given one
     // here.
     bsp_ns: $ => 'bsp',
+
+    // `wrapping` read as a name: a function called `wrapping`, a
+    // variable, a field.  Where a statement starts the word lexes as the
+    // keyword `wrapping_stmt` opens with, so the name has to accept that
+    // token too; it is aliased to `identifier`, and the tree is the one
+    // any other name gets.
+    _wrapping_name: $ => 'wrapping',
 
     // `match scrutinee\n    arm => ...` as an expression — used in
     // `let x = match ...` and similar.  Same shape as match_stmt

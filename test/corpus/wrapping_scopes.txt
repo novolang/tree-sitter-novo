@@ -1,0 +1,135 @@
+==================
+wrapping block — the body is a block
+==================
+
+fn main()
+    wrapping
+        x = x + 1
+
+---
+
+(source_file
+  (fn_decl
+    name: (identifier)
+    params: (param_list)
+    body: (block
+      (wrapping_stmt
+        body: (block
+          (expr_stmt
+            (assignment_stmt
+              target: (identifier)
+              value: (binary_expr
+                (identifier)
+                (integer_literal)))))))))
+
+==================
+wrapping annotation on a function
+==================
+
+@wrapping
+fn mix(h: Int, b: Int) -> Int
+    return h * b
+
+---
+
+(source_file
+  (fn_decl
+    (attribute
+      (identifier))
+    (identifier)
+    (param_list
+      (param
+        (identifier)
+        (named_type
+          (identifier)))
+      (param
+        (identifier)
+        (named_type
+          (identifier))))
+    (named_type
+      (identifier))
+    (block
+      (return_stmt
+        (binary_expr
+          (identifier)
+          (identifier))))))
+
+==================
+wrapping as a name inside an expression
+==================
+
+fn main()
+    let n = wrapping + 1
+
+---
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list)
+    (block
+      (let_stmt
+        (identifier)
+        (binary_expr
+          (identifier)
+          (integer_literal))))))
+
+==================
+wrapping as a function called at the start of a statement
+==================
+
+fn main()
+    wrapping(2)
+    wrapping (3)
+    wrapping = wrapping + 1
+
+---
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list)
+    (block
+      (expr_stmt
+        (call_expr
+          (identifier)
+          (integer_literal)))
+      (expr_stmt
+        (call_expr
+          (identifier)
+          (integer_literal)))
+      (expr_stmt
+        (assignment_stmt
+          (identifier)
+          (binary_expr
+            (identifier)
+            (integer_literal)))))))
+
+==================
+wrapping block after a call to a function named wrapping
+==================
+
+fn main()
+    let y = wrapping(1)
+    wrapping   // a comment after the word
+        y *= 3
+
+---
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list)
+    (block
+      (let_stmt
+        (identifier)
+        (call_expr
+          (identifier)
+          (integer_literal)))
+      (wrapping_stmt
+        (line_comment)
+        (block
+          (expr_stmt
+            (assignment_stmt
+              (identifier)
+              (integer_literal))))))))

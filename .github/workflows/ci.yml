@@ -1,6 +1,6 @@
 name: ci
 
-# The corpus is the contract: 131 parse assertions that must hold, plus
+# The corpus is the contract: 182 parse assertions that must hold, plus
 # a check that the committed src/ actually matches grammar.js.  A commit
 # that edits the grammar without regenerating would otherwise ship a
 # parser that disagrees with its own source.

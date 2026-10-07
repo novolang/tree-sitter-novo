@@ -16,6 +16,24 @@ use ml.{core, cpu, loader}
         (identifier)))))
 
 ================================================================
+use with a renamed name in the brace group
+================================================================
+
+use hub.{Said as HubSaid, say}
+
+----
+
+(source_file
+  (use_decl
+    (module_path
+      (identifier)
+      (import_group
+        (import_rename
+          (identifier)
+          (identifier))
+        (identifier)))))
+
+================================================================
 use with glob
 ================================================================
 

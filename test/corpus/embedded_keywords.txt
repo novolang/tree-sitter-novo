@@ -180,6 +180,162 @@ bsp Nrf52840
         slot: (integer_literal)))))
 
 ==================
+bsp — an interrupt line with alias names
+==================
+
+bsp Nrf52840
+    irq UARTE0_UART0 vector 2 alias UARTE0, UART0
+
+---
+
+(source_file
+  (bsp_decl
+    name: (identifier)
+    body: (bsp_block
+      (bsp_irq
+        name: (identifier)
+        slot: (integer_literal)
+        alias: (identifier)
+        alias: (identifier)))))
+
+==================
+bsp — the board block of pins and the devices block of chips
+==================
+
+bsp Sensorboard
+    arch "cortex_m4"
+    board
+        led1      13
+        temp_int  25
+        flash_cs  27
+    devices
+        inlet   P3t1755  from "p3t1755-nv"  on i2c0  addr 0x48  irq temp_int
+        outlet  P3t1755  from "p3t1755-nv"  on i2c0  addr 0x49
+        store   At45db   from "at45db-nv"   on spi0  cs flash_cs
+        probe   FakeThermo  from "fake-thermo-nv"  irq 25  addr 72  on i2c1
+    irq RADIO vector 1
+
+---
+
+(source_file
+  (bsp_decl
+    name: (identifier)
+    body: (bsp_block
+      (bsp_scalar
+        key: (identifier)
+        value: (string_literal))
+      (bsp_board
+        (bsp_pin
+          name: (identifier)
+          pin: (integer_literal))
+        (bsp_pin
+          name: (identifier)
+          pin: (integer_literal))
+        (bsp_pin
+          name: (identifier)
+          pin: (integer_literal)))
+      (bsp_devices
+        (bsp_device
+          name: (identifier)
+          driver: (identifier)
+          package: (string_literal)
+          bus: (identifier)
+          addr: (integer_literal)
+          irq: (identifier))
+        (bsp_device
+          name: (identifier)
+          driver: (identifier)
+          package: (string_literal)
+          bus: (identifier)
+          addr: (integer_literal))
+        (bsp_device
+          name: (identifier)
+          driver: (identifier)
+          package: (string_literal)
+          bus: (identifier)
+          cs: (identifier))
+        (bsp_device
+          name: (identifier)
+          driver: (identifier)
+          package: (string_literal)
+          irq: (integer_literal)
+          addr: (integer_literal)
+          bus: (identifier)))
+      (bsp_irq
+        name: (identifier)
+        slot: (integer_literal)))))
+
+==================
+the words of a devices line stay names outside a bsp
+==================
+
+fn cs(addr: Int, on: Bool) -> Int
+    let board = addr
+    let devices = bsp.board.led1()
+    board + devices
+
+---
+
+(source_file
+  (fn_decl
+    name: (identifier)
+    params: (param_list
+      (param
+        name: (identifier)
+        type: (named_type
+          (identifier)))
+      (param
+        name: (identifier)
+        type: (named_type
+          (identifier))))
+    return_type: (named_type
+      (identifier))
+    body: (block
+      (let_stmt
+        name: (identifier)
+        value: (identifier))
+      (let_stmt
+        name: (identifier)
+        value: (call_expr
+          callee: (field_access
+            value: (field_access
+              value: (bsp_ns)
+              field: (identifier))
+            field: (identifier))))
+      (expr_stmt
+        (binary_expr
+          (identifier)
+          (identifier))))))
+
+==================
+peripheral — a register array at a computed address
+==================
+
+peripheral FICR at 0x10000000
+    register DEVICEID[2] at 0x60 stride 4 : u32
+        field deviceid : 32 @ 0
+
+---
+
+(source_file
+  (peripheral_decl
+    name: (identifier)
+    addr: (integer_literal)
+    body: (block
+      (register_decl
+        name: (identifier)
+        count: (integer_literal)
+        addr: (integer_literal)
+        stride: (integer_literal)
+        type: (named_type
+          (identifier))
+        body: (field_decl_block
+          (field_decl
+            name: (identifier)
+            width: (integer_literal)
+            offset: (integer_literal)))))))
+
+==================
 bsp is also the stdlib module head
 ==================
 

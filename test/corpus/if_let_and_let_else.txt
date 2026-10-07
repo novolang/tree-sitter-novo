@@ -1,0 +1,209 @@
+==================
+if let with a body and an else
+==================
+
+fn f(o: ?Int) -> Int
+    if let Some(v) = o
+        v
+    else
+        0
+
+---
+
+(source_file
+  (fn_decl
+    name: (identifier)
+    params: (param_list
+      (param
+        name: (identifier)
+        type: (optional_type
+          (named_type
+            (identifier)))))
+    return_type: (named_type
+      (identifier))
+    body: (block
+      (if_stmt
+        pattern: (constructor_pattern
+          (identifier)
+          (identifier_pattern
+            (identifier)))
+        value: (identifier)
+        body: (block
+          (expr_stmt
+            (identifier))))
+      (else_stmt
+        body: (block
+          (expr_stmt
+            (integer_literal)))))))
+
+==================
+if var and else if let
+==================
+
+fn f(s: Shape) -> Int
+    if var Square(n) = s
+        n
+    else if let Circle(r) = s
+        r
+
+---
+
+(source_file
+  (fn_decl
+    name: (identifier)
+    params: (param_list
+      (param
+        name: (identifier)
+        type: (named_type
+          (identifier))))
+    return_type: (named_type
+      (identifier))
+    body: (block
+      (if_stmt
+        pattern: (constructor_pattern
+          (identifier)
+          (identifier_pattern
+            (identifier)))
+        value: (identifier)
+        body: (block
+          (expr_stmt
+            (identifier))))
+      (else_stmt)
+      (if_stmt
+        pattern: (constructor_pattern
+          (identifier)
+          (identifier_pattern
+            (identifier)))
+        value: (identifier)
+        body: (block
+          (expr_stmt
+            (identifier)))))))
+
+==================
+let else with a statement on the same line
+==================
+
+fn f(o: ?Int) -> ?Int
+    let Some(v) = o else return None
+    Some(v)
+
+---
+
+(source_file
+  (fn_decl
+    name: (identifier)
+    params: (param_list
+      (param
+        name: (identifier)
+        type: (optional_type
+          (named_type
+            (identifier)))))
+    return_type: (optional_type
+      (named_type
+        (identifier)))
+    body: (block
+      (let_stmt
+        pattern: (constructor_pattern
+          (identifier)
+          (identifier_pattern
+            (identifier)))
+        value: (identifier)
+        else: (return_stmt
+          (none_literal)))
+      (expr_stmt
+        (call_expr
+          callee: (identifier)
+          (identifier))))))
+
+==================
+let else with a block, a struct and a tuple pattern
+==================
+
+fn f(p: Point, t: (?Int, Int)) -> Int
+    let Point { x, y } = p else
+        return 0
+    var (Some(a), b) = t else
+        return 1
+    a
+
+---
+
+(source_file
+  (fn_decl
+    name: (identifier)
+    params: (param_list
+      (param
+        name: (identifier)
+        type: (named_type
+          (identifier)))
+      (param
+        name: (identifier)
+        type: (tuple_type
+          (optional_type
+            (named_type
+              (identifier)))
+          (named_type
+            (identifier)))))
+    return_type: (named_type
+      (identifier))
+    body: (block
+      (let_stmt
+        pattern: (struct_pattern
+          type: (identifier)
+          (struct_pattern_field
+            name: (identifier))
+          (struct_pattern_field
+            name: (identifier)))
+        value: (identifier)
+        else: (block
+          (return_stmt
+            (integer_literal))))
+      (let_stmt
+        pattern: (tuple_pattern
+          (constructor_pattern
+            (identifier)
+            (identifier_pattern
+              (identifier)))
+          (identifier_pattern
+            (identifier)))
+        value: (identifier)
+        else: (block
+          (return_stmt
+            (integer_literal))))
+      (expr_stmt
+        (identifier)))))
+
+==================
+plain let and tuple let are unchanged
+==================
+
+fn f() -> Int
+    let x = 1
+    let _ = f(x)
+    let (a, _) = pair
+    x
+
+---
+
+(source_file
+  (fn_decl
+    name: (identifier)
+    params: (param_list)
+    return_type: (named_type
+      (identifier))
+    body: (block
+      (let_stmt
+        name: (identifier)
+        value: (integer_literal))
+      (let_stmt
+        name: (wildcard_pattern)
+        value: (call_expr
+          callee: (identifier)
+          (identifier)))
+      (let_stmt
+        name: (tuple_binder
+          (identifier)
+          (wildcard_pattern))
+        value: (identifier))
+      (expr_stmt
+        (identifier)))))

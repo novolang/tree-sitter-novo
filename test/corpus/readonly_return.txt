@@ -1,0 +1,51 @@
+==================
+fn header — readonly list return
+==================
+
+fn items(b: Bag) -> readonly [Int]
+
+---
+
+(source_file
+  (fn_decl
+    name: (identifier)
+    params: (param_list
+      (param
+        name: (identifier)
+        type: (named_type
+          (identifier))))
+    return_type: (readonly_type
+      (list_type
+        (named_type
+          (identifier))))))
+
+==================
+fn header — readonly Bytes return with an effect row
+==================
+
+fn raw() -> readonly Bytes [io]
+
+---
+
+(source_file
+  (fn_decl
+    name: (identifier)
+    params: (param_list)
+    return_type: (readonly_type
+      (named_type
+        (identifier)))
+    effects: (effect_list
+      (identifier))))
+
+==================
+readonly stays a name outside a return type
+==================
+
+let readonly = 3
+
+---
+
+(source_file
+  (let_stmt
+    name: (identifier)
+    value: (integer_literal)))

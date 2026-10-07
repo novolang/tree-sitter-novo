@@ -522,6 +522,32 @@ fn f(y: Int) -> Str
             (identifier)))))))
 
 ================================================================
+var tuple destructure
+================================================================
+
+fn f() -> Int
+    var (a, b) = pair()
+    a
+
+----
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list)
+    (named_type
+      (identifier))
+    (block
+      (let_stmt
+        (tuple_binder
+          (identifier)
+          (identifier))
+        (call_expr
+          (identifier)))
+      (expr_stmt
+        (identifier)))))
+
+================================================================
 let tuple destructure with a wildcard binder
 ================================================================
 

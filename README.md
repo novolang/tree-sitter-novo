@@ -34,7 +34,7 @@ The queries under `queries/` are neovim-flavoured capture names.
 | `grammar.js` | the grammar — the only file to edit by hand |
 | `src/parser.c`, `src/scanner.c` | generated; regenerate, never edit |
 | `queries/` | highlights, folds, indents, locals, textobjects |
-| `test/corpus/` | 131 parse assertions, run by `tree-sitter test` |
+| `test/corpus/` | 182 parse assertions, run by `tree-sitter test` |
 
 `scanner.c` is not optional. Novo is indentation-based and the external
 scanner is what emits `INDENT`, `DEDENT` and `NEWLINE`; a parser built

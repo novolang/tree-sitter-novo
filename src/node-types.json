@@ -1169,6 +1169,16 @@
           }
         ]
       },
+      "len": {
+        "multiple": true,
+        "required": false,
+        "types": [
+          {
+            "type": "integer_literal",
+            "named": true
+          }
+        ]
+      },
       "name": {
         "multiple": false,
         "required": true,
@@ -12559,6 +12569,10 @@
   },
   {
     "type": "irqs",
+    "named": false
+  },
+  {
+    "type": "len",
     "named": false
   },
   {

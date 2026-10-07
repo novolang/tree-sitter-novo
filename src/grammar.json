@@ -3252,6 +3252,23 @@
                       }
                     }
                   ]
+                },
+                {
+                  "type": "SEQ",
+                  "members": [
+                    {
+                      "type": "STRING",
+                      "value": "len"
+                    },
+                    {
+                      "type": "FIELD",
+                      "name": "len",
+                      "content": {
+                        "type": "SYMBOL",
+                        "name": "integer_literal"
+                      }
+                    }
+                  ]
                 }
               ]
             }

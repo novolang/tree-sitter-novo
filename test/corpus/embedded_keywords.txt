@@ -213,6 +213,7 @@ bsp Sensorboard
         outlet  P3t1755  from "p3t1755-nv"  on i2c0  addr 0x49
         store   At45db   from "at45db-nv"   on spi0  cs flash_cs
         probe   FakeThermo  from "fake-thermo-nv"  irq 25  addr 72  on i2c1
+        rgb     Ws2812   from "ws2812-nv"   on pulse0  len 1
     irq RADIO vector 1
 
 ---
@@ -260,7 +261,13 @@ bsp Sensorboard
           package: (string_literal)
           irq: (integer_literal)
           addr: (integer_literal)
-          bus: (identifier)))
+          bus: (identifier))
+        (bsp_device
+          name: (identifier)
+          driver: (identifier)
+          package: (string_literal)
+          bus: (identifier)
+          len: (integer_literal)))
       (bsp_irq
         name: (identifier)
         slot: (integer_literal)))))

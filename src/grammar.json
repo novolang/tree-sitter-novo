@@ -3269,6 +3269,23 @@
                       }
                     }
                   ]
+                },
+                {
+                  "type": "SEQ",
+                  "members": [
+                    {
+                      "type": "STRING",
+                      "value": "en"
+                    },
+                    {
+                      "type": "FIELD",
+                      "name": "en",
+                      "content": {
+                        "type": "SYMBOL",
+                        "name": "_bsp_pin_ref"
+                      }
+                    }
+                  ]
                 }
               ]
             }

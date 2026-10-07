@@ -708,7 +708,7 @@ module.exports = grammar({
     // `devices` — the chips on the board's buses, one named device per
     // line:
     //   <name> <DriverType> from "<package>" on <i2cN|spiN|pulseN>
-    //          [addr <n>] [cs <pin>] [irq <pin>] [len <n>]
+    //          [addr <n>] [cs <pin>] [irq <pin>] [len <n>] [en <pin>]
     // Every word after the package opens with its keyword, so a line
     // ends where the next device's name begins.  The words may come in
     // any order, as the reference parser takes them; which ones a bus
@@ -731,6 +731,7 @@ module.exports = grammar({
         seq('cs', field('cs', $._bsp_pin_ref)),
         seq('irq', field('irq', $._bsp_pin_ref)),
         seq('len', field('len', $.integer_literal)),
+        seq('en', field('en', $._bsp_pin_ref)),
       )),
     )),
 

@@ -70,6 +70,7 @@
   "addr"
   "cs"
   "len"
+  "en"
 ] @keyword
 
 ; `else`, `pass`, `break`, `continue` are single-token rules so

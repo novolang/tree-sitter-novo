@@ -63,6 +63,61 @@ use ml.core as c
     (identifier)))
 
 ================================================================
+use of the generated configuration of a package
+================================================================
+
+use noble.CONFIG
+use noble_audio.CONFIG as CORE
+
+----
+
+(source_file
+  (use_decl
+    (module_path
+      (identifier)
+      (identifier)))
+  (use_decl
+    (module_path
+      (identifier)
+      (identifier))
+    (identifier)))
+
+================================================================
+a key read through the path of the generated configuration
+================================================================
+
+@when(noble.CONFIG.MAX_CONNECTIONS > 0)
+fn start() -> Int
+    noble.CONFIG.budget_bytes() + CORE.MAX_ASES
+
+----
+
+(source_file
+  (fn_decl
+    (attribute
+      (identifier)
+      (identifier)
+      (identifier)
+      (identifier)
+      (integer_literal))
+    (identifier)
+    (param_list)
+    (named_type
+      (identifier))
+    (block
+      (expr_stmt
+        (binary_expr
+          (call_expr
+            (field_access
+              (field_access
+                (identifier)
+                (identifier))
+              (identifier)))
+          (field_access
+            (identifier)
+            (identifier)))))))
+
+================================================================
 generic bound binding an effect parameter
 ================================================================
 
@@ -336,3 +391,54 @@ fn nothing()
     (block
       (expr_stmt
         (unit_literal)))))
+
+================================================================================
+a use loaded under a configuration key
+================================================================================
+
+use noble_controller.CONFIG
+@when(noble_controller.CONFIG.CTL_CS > 0)
+use ll_cs_air
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (use_decl
+    (module_path
+      (identifier)
+      (identifier)))
+  (use_decl
+    (attribute
+      (identifier)
+      (identifier)
+      (identifier)
+      (identifier)
+      (integer_literal))
+    (module_path
+      (identifier))))
+
+==================
+pub use re-exports names from a module
+==================
+
+use deframe
+pub use deframe.{ Step, Event, feed }
+pub use std.list
+
+---
+
+(source_file
+  (use_decl
+    (module_path
+      (identifier)))
+  (use_decl
+    (module_path
+      (identifier)
+      (import_group
+        (identifier)
+        (identifier)
+        (identifier))))
+  (use_decl
+    (module_path
+      (identifier)
+      (identifier))))

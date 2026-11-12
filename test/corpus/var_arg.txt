@@ -1,0 +1,36 @@
+==================
+a call whose argument is marked var
+==================
+
+bump(var n)
+
+---
+
+(source_file
+  (expr_stmt
+    (call_expr
+      callee: (identifier)
+      (var_arg
+        value: (identifier)))))
+
+==================
+a marked argument beside a plain one and a labelled one
+==================
+
+step(var a, b, c: var d.e)
+
+---
+
+(source_file
+  (expr_stmt
+    (call_expr
+      callee: (identifier)
+      (var_arg
+        value: (identifier))
+      (identifier)
+      (named_arg
+        name: (identifier)
+        value: (var_arg
+          value: (field_access
+            value: (identifier)
+            field: (identifier)))))))

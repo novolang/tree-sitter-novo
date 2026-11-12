@@ -316,3 +316,163 @@ pub const LIMIT = 10
   (const_decl
     name: (identifier)
     value: (integer_literal)))
+
+==================
+the unit type, (), as a type argument and as an answer
+==================
+
+fn main() -> Result<(), Str> [io]
+    pass
+
+fn step() -> ()
+    pass
+
+---
+
+(source_file
+  (fn_decl
+    name: (identifier)
+    params: (param_list)
+    return_type: (generic_type
+      (identifier)
+      (unit_type)
+      (named_type
+        (identifier)))
+    effects: (effect_list
+      (identifier))
+    body: (block
+      (pass_stmt)))
+  (fn_decl
+    name: (identifier)
+    params: (param_list)
+    return_type: (unit_type)
+    body: (block
+      (pass_stmt))))
+
+==================
+frame as a name: a call, a binder, an assignment and a parameter
+==================
+
+fn render(frame: Int) -> Int
+    var frame = bytes.zeros(8)
+    frame(var buf, i, i * 1000)
+    frame = frame + 1
+    frame
+
+---
+
+(source_file
+  (fn_decl
+    name: (identifier)
+    params: (param_list
+      (param
+        name: (identifier)
+        type: (named_type
+          (identifier))))
+    return_type: (named_type
+      (identifier))
+    body: (block
+      (let_stmt
+        name: (identifier)
+        value: (call_expr
+          callee: (field_access
+            value: (identifier)
+            field: (identifier))
+          (integer_literal)))
+      (expr_stmt
+        (call_expr
+          callee: (identifier)
+          (var_arg
+            value: (identifier))
+          (identifier)
+          (binary_expr
+            (identifier)
+            (integer_literal))))
+      (expr_stmt
+        (assignment_stmt
+          target: (identifier)
+          value: (binary_expr
+            (identifier)
+            (integer_literal))))
+      (expr_stmt
+        (identifier)))))
+
+==================
+frame as a declaration still needs a second name and =
+==================
+
+frame Packet = Hdr ++ Body
+
+---
+
+(source_file
+  (frame_decl
+    name: (identifier)
+    value: (named_type
+      (identifier))
+    value: (named_type
+      (identifier))))
+
+==================
+assignment to self in a var self method
+==================
+
+impl Acc
+    fn reset(var self)
+        self = Acc.zero()
+
+---
+
+(source_file
+  (impl_decl
+    subject: (named_type
+      (identifier))
+    body: (block
+      (fn_decl
+        name: (identifier)
+        params: (param_list
+          (self_param))
+        body: (block
+          (expr_stmt
+            (assignment_stmt
+              target: (self_expr)
+              value: (call_expr
+                callee: (field_access
+                  value: (identifier)
+                  field: (identifier))))))))))
+
+==================
+a trait with type parameters and an effect parameter
+==================
+
+pub trait Rich<T: Ord>[e]: Eq + Ord
+    fn need(self, x: T) -> Int [e]
+
+---
+
+(source_file
+  (trait_decl
+    name: (identifier)
+    type_params: (type_params
+      (type_param
+        (identifier)
+        (identifier)))
+    effects: (effect_list
+      (identifier))
+    supertraits: (named_type
+      (identifier))
+    supertraits: (named_type
+      (identifier))
+    body: (block
+      (fn_decl
+        name: (identifier)
+        params: (param_list
+          (self_param)
+          (param
+            name: (identifier)
+            type: (named_type
+              (identifier))))
+        return_type: (named_type
+          (identifier))
+        effects: (effect_list
+          (identifier))))))

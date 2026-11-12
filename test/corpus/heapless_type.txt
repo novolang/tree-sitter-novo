@@ -1,0 +1,331 @@
+================================================================================
+the heapless list type in a parameter, a local and a field
+================================================================================
+
+fn take(var v: Vec[u8; 12]) -> Bool [hw, mutate]
+    var q: Deque[Int; 4] = Deque.new()
+    true
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list
+      (param
+        (identifier)
+        (heapless_type
+          (identifier)
+          (named_type
+            (identifier))
+          (integer_literal))))
+    (named_type
+      (identifier))
+    (effect_list
+      (identifier)
+      (identifier))
+    (block
+      (struct_field
+        (identifier)
+        (heapless_type
+          (identifier)
+          (named_type
+            (identifier))
+          (integer_literal))
+        (call_expr
+          (field_access
+            (identifier)
+            (identifier))))
+      (expr_stmt
+        (bool_literal)))))
+
+================================================================================
+the capacity of a heapless list type is a constant expression
+================================================================================
+
+struct S
+    a: Vec[Link; 4]
+    b: Vec[Link; cfg.N]
+    c: Vec[Link; max1(4)]
+    d: Vec[Link; cfg.N + 1]
+    e: Deque[u8; N]
+    f: Vec[Link; max1(noble_controller.CONFIG.CTL_LINKS) * 2]
+
+pub alias P = Vec[u8; max1(c.K)]
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (struct_decl
+    (identifier)
+    (block
+      (struct_field
+        (identifier)
+        (heapless_type
+          (identifier)
+          (named_type
+            (identifier))
+          (integer_literal)))
+      (struct_field
+        (identifier)
+        (heapless_type
+          (identifier)
+          (named_type
+            (identifier))
+          (field_access
+            (identifier)
+            (identifier))))
+      (struct_field
+        (identifier)
+        (heapless_type
+          (identifier)
+          (named_type
+            (identifier))
+          (call_expr
+            (identifier)
+            (integer_literal))))
+      (struct_field
+        (identifier)
+        (heapless_type
+          (identifier)
+          (named_type
+            (identifier))
+          (binary_expr
+            (field_access
+              (identifier)
+              (identifier))
+            (integer_literal))))
+      (struct_field
+        (identifier)
+        (heapless_type
+          (identifier)
+          (named_type
+            (identifier))
+          (identifier)))
+      (struct_field
+        (identifier)
+        (heapless_type
+          (identifier)
+          (named_type
+            (identifier))
+          (binary_expr
+            (call_expr
+              (identifier)
+              (field_access
+                (field_access
+                  (identifier)
+                  (identifier))
+                (identifier)))
+            (integer_literal))))))
+  (alias_decl
+    (identifier)
+    (heapless_type
+      (identifier)
+      (named_type
+        (identifier))
+      (call_expr
+        (identifier)
+        (field_access
+          (identifier)
+          (identifier))))))
+
+================================================================================
+a heapless list type as the answer of a function
+================================================================================
+
+fn addr6() -> Vec[u8; 6]
+    Vec.new()
+
+fn addr7(n: Int) -> Deque[u8; cfg.N + 1] [mutate]
+    Deque.new()
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list)
+    (heapless_type
+      (identifier)
+      (named_type
+        (identifier))
+      (integer_literal))
+    (block
+      (expr_stmt
+        (call_expr
+          (field_access
+            (identifier)
+            (identifier))))))
+  (fn_decl
+    (identifier)
+    (param_list
+      (param
+        (identifier)
+        (named_type
+          (identifier))))
+    (heapless_type
+      (identifier)
+      (named_type
+        (identifier))
+      (binary_expr
+        (field_access
+          (identifier)
+          (identifier))
+        (integer_literal)))
+    (effect_list
+      (identifier))
+    (block
+      (expr_stmt
+        (call_expr
+          (field_access
+            (identifier)
+            (identifier)))))))
+
+================================================================================
+the sized string and the heapless map, and a generic type named through its module
+================================================================================
+
+fn name_of(d: noble.AdData, prefix: String[16]) -> Bool
+    var seen: Map[Int, Bool; 8] = Map.new()
+    true
+
+pub struct Store<D: Flash[e]>
+    var vol: nvfs.Volume<D>
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list
+      (param
+        (identifier)
+        (named_type
+          (identifier)
+          (identifier)))
+      (param
+        (identifier)
+        (heapless_type
+          (identifier)
+          (integer_literal))))
+    (named_type
+      (identifier))
+    (block
+      (struct_field
+        (identifier)
+        (heapless_type
+          (identifier)
+          (named_type
+            (identifier))
+          (named_type
+            (identifier))
+          (integer_literal))
+        (call_expr
+          (field_access
+            (identifier)
+            (identifier))))
+      (expr_stmt
+        (bool_literal))))
+  (struct_decl
+    (identifier)
+    (type_params
+      (type_param
+        (identifier)
+        (identifier)
+        (effect_list
+          (identifier))))
+    (block
+      (struct_field
+        (identifier)
+        (generic_type
+          (identifier)
+          (identifier)
+          (named_type
+            (identifier)))))))
+
+==================
+Deque<T> and Map<K, V>: the standard containers in angle brackets
+==================
+
+fn queue(d: Deque<u8>, m: Map<Str, Int>) -> Int
+    pass
+
+---
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list
+      (param
+        (identifier)
+        (generic_type
+          (identifier)
+          (named_type
+            (identifier))))
+      (param
+        (identifier)
+        (generic_type
+          (identifier)
+          (named_type
+            (identifier))
+          (named_type
+            (identifier)))))
+    (named_type
+      (identifier))
+    (block
+      (pass_stmt))))
+
+==================
+Deque<T> as a local's type
+==================
+
+fn run()
+    var dq: Deque<Reading> = Deque.new()
+
+---
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list)
+    (block
+      (struct_field
+        (identifier)
+        (generic_type
+          (identifier)
+          (named_type
+            (identifier)))
+        (call_expr
+          (field_access
+            (identifier)
+            (identifier)))))))
+
+==================
+a bare family name is a type name: impl Collection for Deque
+==================
+
+impl Collection for Deque
+    fn len(self) -> Int
+        return self.len()
+
+---
+
+(source_file
+  (impl_decl
+    (named_type
+      (identifier))
+    (named_type
+      (identifier))
+    (block
+      (fn_decl
+        (identifier)
+        (param_list
+          (self_param))
+        (named_type
+          (identifier))
+        (block
+          (return_stmt
+            (call_expr
+              (field_access
+                (self_expr)
+                (identifier)))))))))

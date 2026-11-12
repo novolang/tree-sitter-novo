@@ -122,3 +122,43 @@ fn f(n: Int) -> Str
         (binary_expr
           (identifier)
           (identifier))))))
+
+==================
+a top-level comma in a hole makes it a tuple
+==================
+
+fn tuple_hole(a: Int, b: Int) -> Str
+    "pair=${a, b} and ${a + 1, b, 3}"
+
+---
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list
+      (param
+        (identifier)
+        (named_type
+          (identifier)))
+      (param
+        (identifier)
+        (named_type
+          (identifier))))
+    (named_type
+      (identifier))
+    (block
+      (expr_stmt
+        (fstring_literal
+          (fstring_segment)
+          (fstring_interp
+            (tuple_expr
+              (identifier)
+              (identifier)))
+          (fstring_segment)
+          (fstring_interp
+            (tuple_expr
+              (binary_expr
+                (identifier)
+                (integer_literal))
+              (identifier)
+              (integer_literal))))))))

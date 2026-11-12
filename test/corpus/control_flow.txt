@@ -125,3 +125,64 @@ let p = Rect(4.0, height: 3.0)
       (named_arg
         name: (identifier)
         value: (float_literal)))))
+
+==================
+an if chain as a match arm body, with else if at the arm's indentation
+==================
+
+fn cmp(a: Int, b: Int) -> Int
+    match a
+        0 => if a < b
+            7
+        else if a > b
+            8
+        else
+            9
+        _ => 0
+
+---
+
+(source_file
+  (fn_decl
+    name: (identifier)
+    params: (param_list
+      (param
+        name: (identifier)
+        type: (named_type
+          (identifier)))
+      (param
+        name: (identifier)
+        type: (named_type
+          (identifier))))
+    return_type: (named_type
+      (identifier))
+    body: (block
+      (expr_stmt
+        (match_expr
+          scrutinee: (identifier)
+          body: (match_block
+            (match_arm
+              pattern: (literal_pattern
+                (integer_literal))
+              body: (if_stmt
+                condition: (binary_expr
+                  (identifier)
+                  (identifier))
+                body: (block
+                  (expr_stmt
+                    (integer_literal)))))
+            (else_stmt)
+            (if_stmt
+              condition: (binary_expr
+                (identifier)
+                (identifier))
+              body: (block
+                (expr_stmt
+                  (integer_literal))))
+            (else_stmt
+              body: (block
+                (expr_stmt
+                  (integer_literal))))
+            (match_arm
+              pattern: (wildcard_pattern)
+              body: (integer_literal))))))))

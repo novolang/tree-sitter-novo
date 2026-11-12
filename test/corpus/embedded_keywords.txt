@@ -402,3 +402,192 @@ pub fn add(a: Int, b: Int) -> Int
         (binary_expr
           (identifier)
           (identifier))))))
+
+==================
+pub peripheral type: a block's registers with no base (SPEC 17.1)
+==================
+
+pub peripheral type NrfGpioPort
+    register OUTSET at 0x508 : u32
+    register PIN_CNF[32] at 0x700 stride 4 : u32
+        field pull : 2 @ 2
+
+---
+
+(source_file
+  (peripheral_decl
+    name: (identifier)
+    body: (block
+      (register_decl
+        name: (identifier)
+        addr: (integer_literal)
+        type: (named_type
+          (identifier)))
+      (register_decl
+        name: (identifier)
+        count: (integer_literal)
+        addr: (integer_literal)
+        stride: (integer_literal)
+        type: (named_type
+          (identifier))
+        body: (field_decl_block
+          (field_decl
+            name: (identifier)
+            width: (integer_literal)
+            offset: (integer_literal)))))))
+
+==================
+peripheral type behind an annotation, without pub
+==================
+
+@value
+peripheral type StmTim
+    register CR1 at 0x0 : u32
+
+---
+
+(source_file
+  (peripheral_decl
+    attrs: (attribute
+      (identifier))
+    name: (identifier)
+    body: (block
+      (register_decl
+        name: (identifier)
+        addr: (integer_literal)
+        type: (named_type
+          (identifier))))))
+
+==================
+asm block: a template, then input, output and clobber lines
+==================
+
+fn power_down() [hw]
+    asm cortex_m
+        "bkpt #0xAB"
+        input op = 0x18 @ "{r0}"
+        output ch : Int @ "={r0}"
+        clobber "memory"
+
+---
+
+(source_file
+  (fn_decl
+    name: (identifier)
+    params: (param_list)
+    effects: (effect_list
+      (identifier))
+    body: (block
+      (asm_stmt
+        arch: (identifier)
+        body: (asm_block
+          template: (string_literal)
+          (asm_input
+            name: (identifier)
+            value: (integer_literal)
+            constraint: (string_literal))
+          (asm_output
+            name: (identifier)
+            type: (named_type
+              (identifier))
+            constraint: (string_literal))
+          (asm_clobber
+            value: (string_literal)))))))
+
+==================
+asm block with a triple-quoted template
+==================
+
+fn unmask()
+    asm riscv
+        """csrs mie, {lines}"""
+        input lines = LINES @ "r"
+        clobber "memory"
+
+---
+
+(source_file
+  (fn_decl
+    name: (identifier)
+    params: (param_list)
+    body: (block
+      (asm_stmt
+        arch: (identifier)
+        body: (asm_block
+          template: (string_literal)
+          (asm_input
+            name: (identifier)
+            value: (identifier)
+            constraint: (string_literal))
+          (asm_clobber
+            value: (string_literal)))))))
+
+==================
+input, output and clobber stay ordinary names outside an asm block
+==================
+
+fn pump(input: Int, output: Int) -> Int
+    input + output
+
+---
+
+(source_file
+  (fn_decl
+    name: (identifier)
+    params: (param_list
+      (param
+        name: (identifier)
+        type: (named_type
+          (identifier)))
+      (param
+        name: (identifier)
+        type: (named_type
+          (identifier))))
+    return_type: (named_type
+      (identifier))
+    body: (block
+      (expr_stmt
+        (binary_expr
+          (identifier)
+          (identifier))))))
+
+==================
+memory_map section with words, on one line and over several
+==================
+
+memory_map rp2350
+    region FLASH at 0x10000000 size 4096K
+    section .image_def in FLASH words [0xffffded3, 0x10210142, 0x000001ff]
+    section .flash.appdesc in FLASH words [
+        0xabcd5432, 0x00000000,
+        0x6f766f6e, 0x00000000,
+    ]
+    section .text in FLASH
+
+---
+
+(source_file
+  (memory_map_decl
+    name: (identifier)
+    body: (memory_map_block
+      (memory_region
+        name: (identifier)
+        base: (integer_literal)
+        size: (integer_literal)
+        unit: (identifier))
+      (memory_section
+        name: (section_name)
+        region: (identifier)
+        word: (integer_literal)
+        word: (integer_literal)
+        word: (integer_literal))
+      (memory_section
+        name: (section_name)
+        region: (identifier)
+        word: (integer_literal)
+        word: (integer_literal)
+        word: (integer_literal)
+        word: (integer_literal))
+      (memory_section
+        name: (section_name)
+        region: (identifier)))))

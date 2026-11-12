@@ -97,6 +97,10 @@ module.exports = grammar({
     // names is a binder or a pattern, and only the `else` after the
     // value decides which.
     [$.tuple_binder, $._pattern],
+    // `m.S { ... }` against `m.f(...)` and `m.field`: the module
+    // name is an identifier expression until the `{` after the
+    // second name settles it as a struct literal.
+    [$._expr, $.struct_literal],
   ],
 
   rules: {
@@ -213,7 +217,17 @@ module.exports = grammar({
     // `use a.*`.
     // The brace and glob forms are the package-loader spellings
     // (SPEC §9.3); the plain dotted form works everywhere.
+    // A `use` may carry attributes: `@when(noble_controller.CONFIG.CTL_CS > 0)`
+    // in front of it loads the module only under that configuration
+    // (orbit/noble-controller/src/ctl_hci.nv), and the grammar read the
+    // annotated line as an error.
+    //
+    // `pub use deframe.{ Step, Event }` is how a package root curates
+    // its public interface (SPEC § 9.2, § 9.3): the re-export takes
+    // `pub` and, with it, annotations on either side like the other
+    // declarations.
     use_decl: $ => prec.right(seq(
+      attrsAndPub($),
       'use',
       field('path', $.module_path),
       optional(seq('as', field('alias', $.identifier))),
@@ -268,7 +282,7 @@ module.exports = grammar({
       field('name', $.identifier),
       optional(field('type_params', $.type_params)),
       field('params', $.param_list),
-      optional(field('return_type', seq('->', choice($.readonly_type, $._type_expr)))),
+      optional(field('return_type', seq('->', choice($.readonly_type, $._ret_type)))),
       optional(field('effects', $.effect_list)),
       optional(field('body', $.block)),
     )),
@@ -298,17 +312,28 @@ module.exports = grammar({
         // `@satisfies(REQ-DNS-001)`-style annotations whose
         // argument is the dashed requirement id (which can't
         // parse as a regular identifier).
-        repeat(choice(
-          $.identifier,
-          $.req_id,
-          $.string_literal,
-          $.integer_literal,
-          $.float_literal,
-          ',',
-          '=',
-        )),
+        repeat($._attribute_arg),
         ')',
       )),
+    ),
+
+    // One token of an attribute's argument list, or a parenthesised
+    // group of them.  `@when(cfg.CTL_LINKS >= 2 and cfg.CTL_CIS == 1)`
+    // is a condition, so the dot of a qualified name, the comparison
+    // and arithmetic operators and the words `and`, `or`, `not` take
+    // part; the compiler reads the condition, this grammar only has to
+    // reach the closing parenthesis.
+    _attribute_arg: $ => choice(
+      $.identifier,
+      $.req_id,
+      $.string_literal,
+      $.integer_literal,
+      $.float_literal,
+      ',', '=', '.',
+      '==', '!=', '<', '>', '<=', '>=',
+      '+', '-', '*', '/', '%',
+      'and', 'or', 'not',
+      seq('(', repeat($._attribute_arg), ')'),
     ),
 
     // `<T>`, `<T, U>`, `<S: Greet>`, `<S: Greet + Describe>`,
@@ -335,7 +360,8 @@ module.exports = grammar({
     type_param: $ => prec.right(seq(
       $.identifier,
       optional(seq(':', sepBy1('+',
-        seq($.identifier, optional(field('effects', $.effect_list)))))),
+        seq($.identifier, repeat(seq('.', $.identifier)),
+            optional(field('effects', $.effect_list)))))),
     )),
 
     param_list: $ => seq(
@@ -354,7 +380,7 @@ module.exports = grammar({
 
     param: $ => seq(
       optional(choice('mut', 'var')),
-      field('name', $.identifier),
+      field('name', choice($.identifier, alias($._frame_name, $.identifier))),
       ':',
       field('type', $._type_expr),
       optional(seq('=', field('default', $._expr))),
@@ -500,6 +526,11 @@ module.exports = grammar({
       'trait',
       field('name', $.identifier),
       optional(field('type_params', $.type_params)),
+      // The trait's effect parameter after its type parameters:
+      // `trait Rich<T: Ord>[e]: Eq + Ord` (SPEC § 5.6).  Written
+      // alone, `trait FrameTransport[e]`, it reads as the bracketed
+      // type-parameter list above and gives the same tree as before.
+      optional(field('effects', $.effect_list)),
       optional(seq(':', field('supertraits', sepBy1('+', $._type_expr)))),
       optional(field('body', $.block)),
     )),
@@ -512,7 +543,7 @@ module.exports = grammar({
     impl_decl: $ => prec.right(seq(
       'impl',
       optional(field('type_params', $.type_params)),
-      field('subject', $._type_expr),
+      field('subject', $._ret_type),
       optional(field('effects', $.effect_list)),
       optional(seq('for', field('target', $._type_expr))),
       optional(field('body', $.block)),
@@ -571,8 +602,16 @@ module.exports = grammar({
     //
     // `peripheral UART0 at 0x40002000` — a register group.  The body
     // is register decls, which already have a rule.
+    //
+    // `pub peripheral type NrfGpioPort` is the base-less form (SPEC
+    // § 17.1): a block's registers at offsets from a base the type does
+    // not fix, so there is no `at`.  It takes `pub` and annotations like
+    // the other declarations, and keeps this node, so the register
+    // lines under it highlight and fold the same way.
     peripheral_decl: $ => prec.right(seq(
+      attrsAndPub($),
       'peripheral',
+      optional('type'),
       field('name', $.identifier),
       optional(seq('at', field('addr', $._expr))),
       optional(field('body', $.block)),
@@ -610,7 +649,11 @@ module.exports = grammar({
       optional(field('unit', $.identifier)),
     )),
 
-    // `section .text in FLASH`, `... load_to RAM`, `... pad_to 0x100`.
+    // `section .text in FLASH`, `... load_to RAM`, `... pad_to 0x100`,
+    // and `... words [0xffffded3, 0x10210142]`, which writes these
+    // 32-bit words into the section (the RP2350's IMAGE_DEF block, the
+    // ESP32-C6's application descriptor; docs/bsp-in-novo.md).  The
+    // list may continue over several lines.
     memory_section: $ => prec.right(seq(
       'section',
       field('name', $.section_name),
@@ -618,6 +661,8 @@ module.exports = grammar({
       optional(choice(
         seq('load_to', field('load_to', $.identifier)),
         seq('pad_to', field('pad_to', $._expr)),
+        seq('words', '[', sepBy1(',', field('word', $.integer_literal)),
+            optional(','), ']'),
       )),
     )),
 
@@ -801,9 +846,47 @@ module.exports = grammar({
         seq('{', field('template', $.string_literal), '}',
             optional(seq('clobbers',
                          sepBy1(',', $.string_literal)))),
-        optional(field('body', $.block)),
+        optional(field('body', $.asm_block)),
       ),
     )),
+
+    // The block form of `asm`: the template on its own line, then the
+    // operands, one to a line (parser.mly asm_stmt, asm_item).
+    // `input`, `output` and `clobber` are contextual words in the
+    // reference parser; they are keywords here only in this body.
+    asm_block: $ => seq(
+      $._indent,
+      field('template', $.string_literal),
+      repeat(choice($.asm_input, $.asm_output, $.asm_clobber)),
+      $._dedent,
+    ),
+
+    // `input op = 0x18 @ "{r0}"` — a value placed in a register by the
+    // constraint after the `@`.
+    asm_input: $ => seq(
+      'input',
+      field('name', $.identifier),
+      '=',
+      field('value', $._expr),
+      '@',
+      field('constraint', $.string_literal),
+    ),
+
+    // `output ch : Int @ "={r0}"` — a value read back from a register.
+    asm_output: $ => seq(
+      'output',
+      field('name', $.identifier),
+      ':',
+      field('type', $._type_expr),
+      '@',
+      field('constraint', $.string_literal),
+    ),
+
+    // `clobber "memory"` — a register or resource the template changes.
+    asm_clobber: $ => seq(
+      'clobber',
+      field('value', $.string_literal),
+    ),
 
     state_machine_block: $ => seq(
       $._indent,
@@ -871,7 +954,7 @@ module.exports = grammar({
     struct_field: $ => prec(1, seq(
       optional(field('attrs', repeat1($.attribute))),
       optional(choice('var', 'mut')),
-      field('name', $.identifier),
+      field('name', choice($.identifier, alias('frame', $.identifier))),
       ':',
       field('type', $._type_expr),
       optional(seq('=', field('default', $._expr))),
@@ -890,7 +973,8 @@ module.exports = grammar({
         optional('mut'),
         // `_` lexes as its own token wherever a pattern may start, and
         // the `else` form below lets one start here.
-        field('name', choice($.identifier, $.wildcard_pattern)),
+        field('name', choice($.identifier, alias($._frame_name, $.identifier),
+                             $.wildcard_pattern)),
         optional(seq(':', field('type', $._type_expr))),
         '=',
         field('value', $._expr),
@@ -962,7 +1046,10 @@ module.exports = grammar({
 
     // `frame Name = Hdr ++ Body` — slice-N frame composition DSL.
     // The `++` operator concatenates frame layers.
-    frame_decl: $ => prec.right(seq(
+    // The precedence is what reads `frame Name =` as the declaration
+    // and not as the name `frame` followed by another name: nothing
+    // else puts two names in a row at a statement's start.
+    frame_decl: $ => prec.right(1, seq(
       'frame',
       field('name', $.identifier),
       '=',
@@ -1023,6 +1110,7 @@ module.exports = grammar({
     // unaffected.
     assignment_stmt: $ => prec.dynamic(1, seq(
       field('target', choice($.identifier, alias($._wrapping_name, $.identifier),
+                             alias($._frame_name, $.identifier), $.self_expr,
                              $.field_access, $.index_expr, $.deref_target)),
       field('op', choice('=', '+=', '-=', '*=', '/=', '%=',
                          '|=', '&=', '^=', '<<=', '>>=', '>>>=')),
@@ -1137,7 +1225,7 @@ module.exports = grammar({
     match_block: $ => seq(
       $._indent,
       repeat(seq(
-        choice($.match_arm, $.elif_stmt, $.else_stmt),
+        choice($.match_arm, $.elif_stmt, $.else_stmt, $.if_stmt),
         optional($._newline),
       )),
       $._dedent,
@@ -1178,10 +1266,13 @@ module.exports = grammar({
     // already covers hex, so one rule serves all four of the
     // reference's productions.
     range_pattern: $ => prec(3, seq(
-      $.integer_literal,
+      $._range_bound,
       choice('..', '..='),
-      $.integer_literal,
+      $._range_bound,
     )),
+
+    // A bound is decimal, hex or negative: `0x80..=2047`, `-128..=-1`.
+    _range_bound: $ => seq(optional('-'), $.integer_literal),
 
     // `Point { }`, `Point { .. }`, `Point { x: 0, y }`,
     // `Point { x, y, .. }` — a field named alone binds it by name.
@@ -1259,6 +1350,8 @@ module.exports = grammar({
       $.char_literal,
       $.integer_literal,
       $.float_literal,
+      // `-1`, `-2.5`: the sign is part of the literal.
+      seq('-', choice($.integer_literal, $.float_literal)),
       $.bool_literal,
       $.none_literal,
     ),
@@ -1289,9 +1382,28 @@ module.exports = grammar({
       $.fn_type,
       $.tuple_type,
       $.generic_type,
+      $.heapless_type,
       $.modifier_type,
       $.pointer_type,
       $.paren_type,
+      $.unit_type,
+      $.named_type,
+    ),
+
+    // The type after `->`: every type but the heapless list, whose
+    // `[` would read as the start of the effect row that follows.
+    _ret_type: $ => choice(
+      $.optional_type,
+      $.list_type,
+      $.fixed_array_type,
+      $.fn_type,
+      $.tuple_type,
+      $.generic_type,
+      $.heapless_type,
+      $.modifier_type,
+      $.pointer_type,
+      $.paren_type,
+      $.unit_type,
       $.named_type,
     ),
 
@@ -1311,14 +1423,28 @@ module.exports = grammar({
     // requires a comma.
     paren_type: $ => seq('(', $._type_expr, ')'),
 
+    // `()` — the unit type, the other spelling of `Unit` (SPEC § 3.1):
+    // `Result<(), E>` names the same type as `Result<Unit, E>`.  The
+    // empty parentheses cannot be a parenthesised or a tuple type,
+    // which hold at least one type.
+    unit_type: $ => seq('(', ')'),
+
     // `weak T` (M30 weak ref) and `dyn T` (dynamic dispatch).
     modifier_type: $ => prec.right(seq(
       choice('weak', 'dyn'),
       $._type_expr,
     )),
 
+    //
+    // The four heapless-family names are tokens of their own (see
+    // heapless_type), and a bare one is a name like any other:
+    // `impl Collection for Deque` in the standard library names the
+    // type without arguments.
     named_type: $ => prec.right(seq(
-      $.identifier,
+      choice(
+        $.identifier,
+        alias(choice('Vec', 'Deque', 'Map', 'String'), $.identifier),
+      ),
       optional(seq('.', $.identifier)),
     )),
 
@@ -1343,7 +1469,7 @@ module.exports = grammar({
       optional(sepBy1(',', $._type_expr)),
       optional(','),
       ')',
-      optional(seq('->', $._type_expr)),
+      optional(seq('->', $._ret_type)),
       optional(field('effects', $.effect_list)),
     )),
 
@@ -1359,9 +1485,57 @@ module.exports = grammar({
       ')',
     ),
 
+    // `Vec[T; N]` — the heapless family's inline-capacity list
+    // (SPEC § 14.8): the element type and the capacity, separated by
+    // `;` as in the fixed array type.
+    // The heapless family of SPEC § 14.8: `Vec[T; N]` and `Deque[T; N]`,
+    // `Map[K, V; N]` with its two element types, and `String[N]`, whose
+    // one argument is the capacity.
+    heapless_type: $ => prec.dynamic(2, choice(
+      seq(
+        alias(choice('Vec', 'Deque'), $.identifier),
+        '[',
+        field('element', $._type_expr),
+        ';',
+        field('capacity', $._expr),
+        ']',
+      ),
+      seq(
+        alias('Map', $.identifier),
+        '[',
+        field('key', $._type_expr),
+        ',',
+        field('element', $._type_expr),
+        ';',
+        field('capacity', $._expr),
+        ']',
+      ),
+      seq(
+        alias('String', $.identifier),
+        '[',
+        field('capacity', $._expr),
+        ']',
+      ),
+    )),
+
     // `Foo<T, U>` — generic type instantiation.
+    // `Volume<D>` and, qualified by its module, `nvfs.Volume<D>`: a
+    // dependency's generic type is named through the module that
+    // declares it, the way `nvfs.Volume` is without arguments.
+    //
+    // `Deque<T>` and `Map<K, V>` are the standard library's containers
+    // (SPEC § 14.8), and the heapless rule above spells `Vec`, `Deque`,
+    // `Map` and `String` as tokens of their own so that the `[` after
+    // them can tell the inline family from a name.  The angle-bracket
+    // form is the same name followed by `<`, so the generic type takes
+    // the four tokens as names too and aliases them back to the
+    // identifier node every other generic type has.
     generic_type: $ => prec.right(2, seq(
-      $.identifier,
+      choice(
+        $.identifier,
+        alias(choice('Vec', 'Deque', 'Map', 'String'), $.identifier),
+      ),
+      optional(seq('.', $.identifier)),
       '<',
       sepBy1(',', $._type_expr),
       '>',
@@ -1429,6 +1603,7 @@ module.exports = grammar({
       $.null_expr,
       $.bsp_ns,
       alias($._wrapping_name, $.identifier),
+      alias($._frame_name, $.identifier),
       $.identifier,
     ),
 
@@ -1449,6 +1624,16 @@ module.exports = grammar({
     // token too; it is aliased to `identifier`, and the tree is the one
     // any other name gets.
     _wrapping_name: $ => 'wrapping',
+
+    // `frame` read as a name.  The reference lexer has no token for it:
+    // the word is a declaration only when a second name and `=` follow
+    // (`frame Name = Hdr ++ Body`), and a name everywhere else, because
+    // `frame` is what a render function or a per-tick snapshot is
+    // called.  Here the declaration's keyword is a token, so the name
+    // has to accept it too; the one token of lookahead after it tells
+    // `frame Name =` from `frame(...)`, `frame = ...` and a plain use,
+    // and the result is aliased to `identifier`.
+    _frame_name: $ => 'frame',
 
     // `match scrutinee\n    arm => ...` as an expression — used in
     // `let x = match ...` and similar.  Same shape as match_stmt
@@ -1496,13 +1681,27 @@ module.exports = grammar({
     // `{ ... }` is recognised as part of the literal rather than
     // starting a new block (which doesn't exist as an expression
     // anyway, but tree-sitter's LR(1) needs the disambiguator).
-    struct_literal: $ => prec(15, seq(
-      field('type', $.identifier),
-      '{',
-      optional(sepBy1(',', $.struct_literal_field)),
-      optional(','),
-      '}',
-    )),
+    //
+    // The type may carry one module qualifier, `csip.CoordSend { ... }`,
+    // the spelling a literal of an imported struct takes.
+    struct_literal: $ => choice(
+      prec(15, seq(
+        field('type', $.identifier),
+        '{',
+        optional(sepBy1(',', $.struct_literal_field)),
+        optional(','),
+        '}',
+      )),
+      seq(
+        field('module', $.identifier),
+        '.',
+        field('type', $.identifier),
+        '{',
+        optional(sepBy1(',', $.struct_literal_field)),
+        optional(','),
+        '}',
+      ),
+    ),
 
     struct_literal_field: $ => seq(
       field('name', $.identifier),
@@ -1632,14 +1831,23 @@ module.exports = grammar({
 
     _call_arg: $ => choice(
       $.named_arg,
+      $.var_arg,
       $._expr,
     ),
 
     named_arg: $ => prec(2, seq(
       field('name', $.identifier),
       ':',
-      field('value', $._expr),
+      field('value', choice($._expr, $.var_arg)),
     )),
+
+    // `bump(var n)` — the call-site marker of an in-out `var`
+    // parameter (SPEC §4.3, §14.7): the argument is a place the
+    // callee writes back into.
+    var_arg: $ => seq(
+      'var',
+      field('value', $._expr),
+    ),
 
     // `a[i]` is an index and `a[lo:hi:step]` a slice.  They share the
     // `value [` prefix, and the colon decides between them, so a slice
@@ -1666,11 +1874,14 @@ module.exports = grammar({
       optional(seq(':', optional(field('step', $._expr)))),
     ),
 
-    // `.` and `?.` (safe-navigation) field access.
+    // `.` and `?.` (safe-navigation) field access.  The field is a
+    // name, or a tuple position (`pair.0`, `pair.1`).  After the dot
+    // the float token `.0` is not a valid lookahead, so the position
+    // lexes as its own digits.
     field_access: $ => prec.left(14, seq(
       field('value', $._expr),
       choice('.', '?.'),
-      field('field', $.identifier),
+      field('field', choice($.identifier, alias(/[0-9]+/, $.tuple_index))),
     )),
 
     // `expr!` — postfix result unwrap.  Shares the postfix
@@ -1681,12 +1892,17 @@ module.exports = grammar({
       '!',
     )),
 
+    // An element is an expression or a splice `...xs`, the elements of a
+    // list or fixed array spliced in place (SPEC §6.3).  Lists only: a
+    // tuple, a call argument and a struct field have no splice.
     list_literal: $ => seq(
       '[',
-      optional(sepBy1(',', $._expr)),
+      optional(sepBy1(',', choice($._expr, $.splice_element))),
       optional(','),
       ']',
     ),
+
+    splice_element: $ => seq('...', $._expr),
 
     // `[ elem for pat in iter ]`, optionally `if guard` — SPEC §6.2.
     // Shares the whole `[ expr` prefix with the list literal above, so
@@ -1727,13 +1943,14 @@ module.exports = grammar({
       /[0-9][0-9_]*/,
     ),
 
-    // Float literals — `3.14`, `1e-9`, `2.5e10`, `.5` (`5.` not
-    // accepted; needs a fractional digit either side of the dot
-    // or an explicit exponent).
+    // Float literals — `3.14`, `1e-9`, `2.5e10` (`5.` and `.5` not
+    // accepted; needs a digit either side of the dot, or an explicit
+    // exponent).  The compiler's lexer has no leading-dot float; one
+    // here made `.0` of `r.0` the start of the next match arm's pattern
+    // in `Some(r) => r.0`.
     float_literal: $ => choice(
       /[0-9][0-9_]*\.[0-9][0-9_]*([eE][+-]?[0-9]+)?/,
       /[0-9][0-9_]*[eE][+-]?[0-9]+/,
-      /\.[0-9][0-9_]*([eE][+-]?[0-9]+)?/,
     ),
 
     // Character literal — `'c'`, `'\n'`, `'\xFF'`, `'\''`, `'"'`.  One char or
@@ -1768,16 +1985,33 @@ module.exports = grammar({
     // which is exactly right now that `\$` is a real escape meaning a
     // literal `$` with no interpolation (SPEC §1.5, V1-WAVE2 B8).
     // `"a\${b"` is a plain string; `"a${b}"` is an f-string.
-    string_literal: $ => token(seq(
-      '"',
-      repeat(choice(
-        /[^"\\$]/,
-        /\\./,
-        /\$[^{"]/,
+    //
+    // The multiline spelling, `"""..."""`, is the same node.  Its body
+    // is raw (SPEC § 1.5, multiline strings): a backslash is an
+    // ordinary character, `$ident` is text, and the string ends at the
+    // first run of three quotes.  It is one lexeme, so a comment
+    // spelling inside it is text, and the longest match tells it from
+    // an empty string followed by a string: `"""a"""` is one token
+    // of seven characters where `""` is two.  A `${...}` hole is part
+    // of the lexeme without being parsed, which is the cost of one
+    // token and fine for highlighting.
+    string_literal: $ => choice(
+      token(seq(
+        '"',
+        repeat(choice(
+          /[^"\\$]/,
+          /\\./,
+          /\$[^{"\\]/,
+          // `$` before an escape: the `$` is text and the escape is
+          // its own unit, so `"b$\""` closes at the last quote and
+          // not at the escaped one.
+          /\$\\./,
+        )),
+        optional('$'),
+        '"',
       )),
-      optional('$'),
-      '"',
-    )),
+      token(seq('"""', /([^"]|"[^"]|""[^"])*/, '"""')),
+    ),
 
     // F-string with `${expr}` interpolation.  Structured so
     // highlights.scm can colour the contained expressions
@@ -1809,13 +2043,19 @@ module.exports = grammar({
 
     fstring_interp: $ => seq(
       token.immediate('${'),
-      field('expr', $._expr),
+      field('expr', choice($._expr, alias($._hole_tuple, $.tuple_expr))),
       // The spec may be empty — the split at the top-level `:` is
       // positional, so `"${y:}"` is a hole with an empty spec, not
       // a syntax error.
       optional(seq(':', optional(field('format', $.fstring_format_spec)))),
       '}',
     ),
+
+    // `${a, b}` — a top-level comma inside a hole makes the hole a
+    // tuple, written without the parentheses a tuple has elsewhere
+    // (SPEC § 1.5).  It gets the tuple node, so the tree reads as the
+    // parenthesised spelling does.
+    _hole_tuple: $ => seq($._expr, ',', sepBy1(',', $._expr), optional(',')),
 
     // `fstring_format_spec` — the opaque run after `:` inside
     // `${expr:fmt}`, up to the closing `}` — is an EXTERNAL token, for

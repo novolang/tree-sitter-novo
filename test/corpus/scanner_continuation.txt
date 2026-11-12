@@ -215,3 +215,138 @@ fn cont(a: Int, b: Int) -> Int
           (identifier)))
       (expr_stmt
         (identifier)))))
+
+==================
+a deeper line beginning with or or and continues the line above (SPEC 1.7)
+==================
+
+fn allowed(state: Int, request: Int) -> Bool
+    match state
+        2 => request == 1 or request == 2
+                 or request == 3
+        3 => request > 0
+                 and request < 9
+        _ => false
+
+---
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list
+      (param
+        (identifier)
+        (named_type
+          (identifier)))
+      (param
+        (identifier)
+        (named_type
+          (identifier))))
+    (named_type
+      (identifier))
+    (block
+      (expr_stmt
+        (match_expr
+          (identifier)
+          (match_block
+            (match_arm
+              (literal_pattern
+                (integer_literal))
+              (binary_expr
+                (binary_expr
+                  (binary_expr
+                    (identifier)
+                    (integer_literal))
+                  (binary_expr
+                    (identifier)
+                    (integer_literal)))
+                (binary_expr
+                  (identifier)
+                  (integer_literal))))
+            (match_arm
+              (literal_pattern
+                (integer_literal))
+              (binary_expr
+                (binary_expr
+                  (identifier)
+                  (integer_literal))
+                (binary_expr
+                  (identifier)
+                  (integer_literal))))
+            (match_arm
+              (wildcard_pattern)
+              (bool_literal))))))))
+
+==================
+a negative literal under a match header is an arm, not a continuation
+==================
+
+fn w(n: i8) -> Int
+    match n
+        -128..=-1 => 1
+        0 => 2
+        _ => 3
+
+---
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list
+      (param
+        (identifier)
+        (named_type
+          (identifier))))
+    (named_type
+      (identifier))
+    (block
+      (expr_stmt
+        (match_expr
+          (identifier)
+          (match_block
+            (match_arm
+              (range_pattern
+                (integer_literal)
+                (integer_literal))
+              (integer_literal))
+            (match_arm
+              (literal_pattern
+                (integer_literal))
+              (integer_literal))
+            (match_arm
+              (wildcard_pattern)
+              (integer_literal))))))))
+
+==================
+a spaced minus on a deeper line still continues the line above
+==================
+
+fn d(a: Int, b: Int) -> Int
+    let x = a
+        - b
+    x
+
+---
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list
+      (param
+        (identifier)
+        (named_type
+          (identifier)))
+      (param
+        (identifier)
+        (named_type
+          (identifier))))
+    (named_type
+      (identifier))
+    (block
+      (let_stmt
+        (identifier)
+        (binary_expr
+          (identifier)
+          (identifier)))
+      (expr_stmt
+        (identifier)))))

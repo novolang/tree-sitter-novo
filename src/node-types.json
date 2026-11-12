@@ -50,6 +50,10 @@
             "named": true
           },
           {
+            "type": "heapless_type",
+            "named": true
+          },
+          {
             "type": "list_type",
             "named": true
           },
@@ -75,6 +79,10 @@
           },
           {
             "type": "tuple_type",
+            "named": true
+          },
+          {
+            "type": "unit_type",
             "named": true
           }
         ]
@@ -158,6 +166,296 @@
     }
   },
   {
+    "type": "asm_block",
+    "named": true,
+    "fields": {
+      "template": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "string_literal",
+            "named": true
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "asm_clobber",
+          "named": true
+        },
+        {
+          "type": "asm_input",
+          "named": true
+        },
+        {
+          "type": "asm_output",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "asm_clobber",
+    "named": true,
+    "fields": {
+      "value": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "string_literal",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
+    "type": "asm_input",
+    "named": true,
+    "fields": {
+      "constraint": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "string_literal",
+            "named": true
+          }
+        ]
+      },
+      "name": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      },
+      "value": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "await_expr",
+            "named": true
+          },
+          {
+            "type": "binary_expr",
+            "named": true
+          },
+          {
+            "type": "bool_literal",
+            "named": true
+          },
+          {
+            "type": "bsp_ns",
+            "named": true
+          },
+          {
+            "type": "call_expr",
+            "named": true
+          },
+          {
+            "type": "cast_expr",
+            "named": true
+          },
+          {
+            "type": "char_literal",
+            "named": true
+          },
+          {
+            "type": "closure_expr",
+            "named": true
+          },
+          {
+            "type": "field_access",
+            "named": true
+          },
+          {
+            "type": "float_literal",
+            "named": true
+          },
+          {
+            "type": "fstring_literal",
+            "named": true
+          },
+          {
+            "type": "identifier",
+            "named": true
+          },
+          {
+            "type": "if_expr",
+            "named": true
+          },
+          {
+            "type": "if_stmt",
+            "named": true
+          },
+          {
+            "type": "index_expr",
+            "named": true
+          },
+          {
+            "type": "integer_literal",
+            "named": true
+          },
+          {
+            "type": "list_comprehension",
+            "named": true
+          },
+          {
+            "type": "list_literal",
+            "named": true
+          },
+          {
+            "type": "match_expr",
+            "named": true
+          },
+          {
+            "type": "none_literal",
+            "named": true
+          },
+          {
+            "type": "null_coalesce_expr",
+            "named": true
+          },
+          {
+            "type": "null_expr",
+            "named": true
+          },
+          {
+            "type": "paren_expr",
+            "named": true
+          },
+          {
+            "type": "pipe_expr",
+            "named": true
+          },
+          {
+            "type": "range_expr",
+            "named": true
+          },
+          {
+            "type": "self_expr",
+            "named": true
+          },
+          {
+            "type": "string_literal",
+            "named": true
+          },
+          {
+            "type": "struct_literal",
+            "named": true
+          },
+          {
+            "type": "tuple_expr",
+            "named": true
+          },
+          {
+            "type": "unary_expr",
+            "named": true
+          },
+          {
+            "type": "unit_literal",
+            "named": true
+          },
+          {
+            "type": "unwrap_expr",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
+    "type": "asm_output",
+    "named": true,
+    "fields": {
+      "constraint": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "string_literal",
+            "named": true
+          }
+        ]
+      },
+      "name": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      },
+      "type": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "fixed_array_type",
+            "named": true
+          },
+          {
+            "type": "fn_type",
+            "named": true
+          },
+          {
+            "type": "generic_type",
+            "named": true
+          },
+          {
+            "type": "heapless_type",
+            "named": true
+          },
+          {
+            "type": "list_type",
+            "named": true
+          },
+          {
+            "type": "modifier_type",
+            "named": true
+          },
+          {
+            "type": "named_type",
+            "named": true
+          },
+          {
+            "type": "optional_type",
+            "named": true
+          },
+          {
+            "type": "paren_type",
+            "named": true
+          },
+          {
+            "type": "pointer_type",
+            "named": true
+          },
+          {
+            "type": "tuple_type",
+            "named": true
+          },
+          {
+            "type": "unit_type",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
     "type": "asm_stmt",
     "named": true,
     "fields": {
@@ -176,7 +474,7 @@
         "required": false,
         "types": [
           {
-            "type": "block",
+            "type": "asm_block",
             "named": true
           }
         ]
@@ -279,6 +577,10 @@
           },
           {
             "type": "index_expr",
+            "named": true
+          },
+          {
+            "type": "self_expr",
             "named": true
           }
         ]
@@ -1601,6 +1903,10 @@
         {
           "type": "unwrap_expr",
           "named": true
+        },
+        {
+          "type": "var_arg",
+          "named": true
         }
       ]
     }
@@ -1667,6 +1973,10 @@
         },
         {
           "type": "generic_type",
+          "named": true
+        },
+        {
+          "type": "heapless_type",
           "named": true
         },
         {
@@ -1775,6 +2085,10 @@
         },
         {
           "type": "unit_literal",
+          "named": true
+        },
+        {
+          "type": "unit_type",
           "named": true
         },
         {
@@ -2051,6 +2365,10 @@
             "named": true
           },
           {
+            "type": "heapless_type",
+            "named": true
+          },
+          {
             "type": "list_type",
             "named": true
           },
@@ -2076,6 +2394,10 @@
           },
           {
             "type": "tuple_type",
+            "named": true
+          },
+          {
+            "type": "unit_type",
             "named": true
           }
         ]
@@ -2975,6 +3297,10 @@
           {
             "type": "identifier",
             "named": true
+          },
+          {
+            "type": "tuple_index",
+            "named": true
           }
         ]
       },
@@ -3186,6 +3512,10 @@
             "named": true
           },
           {
+            "type": "heapless_type",
+            "named": true
+          },
+          {
             "type": "list_type",
             "named": true
           },
@@ -3211,6 +3541,10 @@
           },
           {
             "type": "tuple_type",
+            "named": true
+          },
+          {
+            "type": "unit_type",
             "named": true
           }
         ]
@@ -3307,6 +3641,10 @@
             "named": true
           },
           {
+            "type": "heapless_type",
+            "named": true
+          },
+          {
             "type": "list_type",
             "named": true
           },
@@ -3336,6 +3674,10 @@
           },
           {
             "type": "tuple_type",
+            "named": true
+          },
+          {
+            "type": "unit_type",
             "named": true
           }
         ]
@@ -3394,6 +3736,10 @@
           "named": true
         },
         {
+          "type": "heapless_type",
+          "named": true
+        },
+        {
           "type": "list_type",
           "named": true
         },
@@ -3419,6 +3765,10 @@
         },
         {
           "type": "tuple_type",
+          "named": true
+        },
+        {
+          "type": "unit_type",
           "named": true
         }
       ]
@@ -3499,6 +3849,10 @@
             "named": true
           },
           {
+            "type": "heapless_type",
+            "named": true
+          },
+          {
             "type": "list_type",
             "named": true
           },
@@ -3524,6 +3878,10 @@
           },
           {
             "type": "tuple_type",
+            "named": true
+          },
+          {
+            "type": "unit_type",
             "named": true
           }
         ]
@@ -3709,6 +4067,10 @@
             "named": true
           },
           {
+            "type": "heapless_type",
+            "named": true
+          },
+          {
             "type": "list_type",
             "named": true
           },
@@ -3734,6 +4096,10 @@
           },
           {
             "type": "tuple_type",
+            "named": true
+          },
+          {
+            "type": "unit_type",
             "named": true
           }
         ]
@@ -3930,6 +4296,10 @@
           "named": true
         },
         {
+          "type": "heapless_type",
+          "named": true
+        },
+        {
           "type": "identifier",
           "named": true
         },
@@ -3959,6 +4329,268 @@
         },
         {
           "type": "tuple_type",
+          "named": true
+        },
+        {
+          "type": "unit_type",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "heapless_type",
+    "named": true,
+    "fields": {
+      "capacity": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "await_expr",
+            "named": true
+          },
+          {
+            "type": "binary_expr",
+            "named": true
+          },
+          {
+            "type": "bool_literal",
+            "named": true
+          },
+          {
+            "type": "bsp_ns",
+            "named": true
+          },
+          {
+            "type": "call_expr",
+            "named": true
+          },
+          {
+            "type": "cast_expr",
+            "named": true
+          },
+          {
+            "type": "char_literal",
+            "named": true
+          },
+          {
+            "type": "closure_expr",
+            "named": true
+          },
+          {
+            "type": "field_access",
+            "named": true
+          },
+          {
+            "type": "float_literal",
+            "named": true
+          },
+          {
+            "type": "fstring_literal",
+            "named": true
+          },
+          {
+            "type": "identifier",
+            "named": true
+          },
+          {
+            "type": "if_expr",
+            "named": true
+          },
+          {
+            "type": "if_stmt",
+            "named": true
+          },
+          {
+            "type": "index_expr",
+            "named": true
+          },
+          {
+            "type": "integer_literal",
+            "named": true
+          },
+          {
+            "type": "list_comprehension",
+            "named": true
+          },
+          {
+            "type": "list_literal",
+            "named": true
+          },
+          {
+            "type": "match_expr",
+            "named": true
+          },
+          {
+            "type": "none_literal",
+            "named": true
+          },
+          {
+            "type": "null_coalesce_expr",
+            "named": true
+          },
+          {
+            "type": "null_expr",
+            "named": true
+          },
+          {
+            "type": "paren_expr",
+            "named": true
+          },
+          {
+            "type": "pipe_expr",
+            "named": true
+          },
+          {
+            "type": "range_expr",
+            "named": true
+          },
+          {
+            "type": "self_expr",
+            "named": true
+          },
+          {
+            "type": "string_literal",
+            "named": true
+          },
+          {
+            "type": "struct_literal",
+            "named": true
+          },
+          {
+            "type": "tuple_expr",
+            "named": true
+          },
+          {
+            "type": "unary_expr",
+            "named": true
+          },
+          {
+            "type": "unit_literal",
+            "named": true
+          },
+          {
+            "type": "unwrap_expr",
+            "named": true
+          }
+        ]
+      },
+      "element": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "fixed_array_type",
+            "named": true
+          },
+          {
+            "type": "fn_type",
+            "named": true
+          },
+          {
+            "type": "generic_type",
+            "named": true
+          },
+          {
+            "type": "heapless_type",
+            "named": true
+          },
+          {
+            "type": "list_type",
+            "named": true
+          },
+          {
+            "type": "modifier_type",
+            "named": true
+          },
+          {
+            "type": "named_type",
+            "named": true
+          },
+          {
+            "type": "optional_type",
+            "named": true
+          },
+          {
+            "type": "paren_type",
+            "named": true
+          },
+          {
+            "type": "pointer_type",
+            "named": true
+          },
+          {
+            "type": "tuple_type",
+            "named": true
+          },
+          {
+            "type": "unit_type",
+            "named": true
+          }
+        ]
+      },
+      "key": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "fixed_array_type",
+            "named": true
+          },
+          {
+            "type": "fn_type",
+            "named": true
+          },
+          {
+            "type": "generic_type",
+            "named": true
+          },
+          {
+            "type": "heapless_type",
+            "named": true
+          },
+          {
+            "type": "list_type",
+            "named": true
+          },
+          {
+            "type": "modifier_type",
+            "named": true
+          },
+          {
+            "type": "named_type",
+            "named": true
+          },
+          {
+            "type": "optional_type",
+            "named": true
+          },
+          {
+            "type": "paren_type",
+            "named": true
+          },
+          {
+            "type": "pointer_type",
+            "named": true
+          },
+          {
+            "type": "tuple_type",
+            "named": true
+          },
+          {
+            "type": "unit_type",
+            "named": true
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "identifier",
           "named": true
         }
       ]
@@ -4915,6 +5547,10 @@
             "named": true
           },
           {
+            "type": "heapless_type",
+            "named": true
+          },
+          {
             "type": "list_type",
             "named": true
           },
@@ -4940,6 +5576,10 @@
           },
           {
             "type": "tuple_type",
+            "named": true
+          },
+          {
+            "type": "unit_type",
             "named": true
           }
         ]
@@ -4961,6 +5601,10 @@
             "named": true
           },
           {
+            "type": "heapless_type",
+            "named": true
+          },
+          {
             "type": "list_type",
             "named": true
           },
@@ -4986,6 +5630,10 @@
           },
           {
             "type": "tuple_type",
+            "named": true
+          },
+          {
+            "type": "unit_type",
             "named": true
           }
         ]
@@ -5558,6 +6206,10 @@
             "named": true
           },
           {
+            "type": "heapless_type",
+            "named": true
+          },
+          {
             "type": "list_type",
             "named": true
           },
@@ -5583,6 +6235,10 @@
           },
           {
             "type": "tuple_type",
+            "named": true
+          },
+          {
+            "type": "unit_type",
             "named": true
           }
         ]
@@ -6294,6 +6950,10 @@
           "named": true
         },
         {
+          "type": "splice_element",
+          "named": true
+        },
+        {
           "type": "string_literal",
           "named": true
         },
@@ -6396,6 +7056,10 @@
           "named": true
         },
         {
+          "type": "heapless_type",
+          "named": true
+        },
+        {
           "type": "list_type",
           "named": true
         },
@@ -6421,6 +7085,10 @@
         },
         {
           "type": "tuple_type",
+          "named": true
+        },
+        {
+          "type": "unit_type",
           "named": true
         }
       ]
@@ -6835,6 +7503,10 @@
         },
         {
           "type": "else_stmt",
+          "named": true
+        },
+        {
+          "type": "if_stmt",
           "named": true
         },
         {
@@ -7654,6 +8326,16 @@
             "named": true
           }
         ]
+      },
+      "word": {
+        "multiple": true,
+        "required": false,
+        "types": [
+          {
+            "type": "integer_literal",
+            "named": true
+          }
+        ]
       }
     }
   },
@@ -7675,6 +8357,10 @@
         },
         {
           "type": "generic_type",
+          "named": true
+        },
+        {
+          "type": "heapless_type",
           "named": true
         },
         {
@@ -7703,6 +8389,10 @@
         },
         {
           "type": "tuple_type",
+          "named": true
+        },
+        {
+          "type": "unit_type",
           "named": true
         }
       ]
@@ -7889,6 +8579,10 @@
           {
             "type": "unwrap_expr",
             "named": true
+          },
+          {
+            "type": "var_arg",
+            "named": true
           }
         ]
       }
@@ -8069,6 +8763,10 @@
           "named": true
         },
         {
+          "type": "heapless_type",
+          "named": true
+        },
+        {
           "type": "list_type",
           "named": true
         },
@@ -8094,6 +8792,10 @@
         },
         {
           "type": "tuple_type",
+          "named": true
+        },
+        {
+          "type": "unit_type",
           "named": true
         }
       ]
@@ -8319,6 +9021,10 @@
             "named": true
           },
           {
+            "type": "heapless_type",
+            "named": true
+          },
+          {
             "type": "list_type",
             "named": true
           },
@@ -8344,6 +9050,10 @@
           },
           {
             "type": "tuple_type",
+            "named": true
+          },
+          {
+            "type": "unit_type",
             "named": true
           }
         ]
@@ -8529,6 +9239,10 @@
           "named": true
         },
         {
+          "type": "heapless_type",
+          "named": true
+        },
+        {
           "type": "list_type",
           "named": true
         },
@@ -8554,6 +9268,10 @@
         },
         {
           "type": "tuple_type",
+          "named": true
+        },
+        {
+          "type": "unit_type",
           "named": true
         }
       ]
@@ -8697,6 +9415,16 @@
           }
         ]
       },
+      "attrs": {
+        "multiple": true,
+        "required": false,
+        "types": [
+          {
+            "type": "attribute",
+            "named": true
+          }
+        ]
+      },
       "body": {
         "multiple": false,
         "required": false,
@@ -8714,6 +9442,16 @@
           {
             "type": "identifier",
             "named": true
+          }
+        ]
+      },
+      "visibility": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "pub",
+            "named": false
           }
         ]
       }
@@ -8879,6 +9617,10 @@
           "named": true
         },
         {
+          "type": "heapless_type",
+          "named": true
+        },
+        {
           "type": "list_type",
           "named": true
         },
@@ -8904,6 +9646,10 @@
         },
         {
           "type": "tuple_type",
+          "named": true
+        },
+        {
+          "type": "unit_type",
           "named": true
         }
       ]
@@ -9333,6 +10079,10 @@
             "named": true
           },
           {
+            "type": "heapless_type",
+            "named": true
+          },
+          {
             "type": "list_type",
             "named": true
           },
@@ -9358,6 +10108,10 @@
           },
           {
             "type": "tuple_type",
+            "named": true
+          },
+          {
+            "type": "unit_type",
             "named": true
           }
         ]
@@ -10219,6 +10973,145 @@
     }
   },
   {
+    "type": "splice_element",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "await_expr",
+          "named": true
+        },
+        {
+          "type": "binary_expr",
+          "named": true
+        },
+        {
+          "type": "bool_literal",
+          "named": true
+        },
+        {
+          "type": "bsp_ns",
+          "named": true
+        },
+        {
+          "type": "call_expr",
+          "named": true
+        },
+        {
+          "type": "cast_expr",
+          "named": true
+        },
+        {
+          "type": "char_literal",
+          "named": true
+        },
+        {
+          "type": "closure_expr",
+          "named": true
+        },
+        {
+          "type": "field_access",
+          "named": true
+        },
+        {
+          "type": "float_literal",
+          "named": true
+        },
+        {
+          "type": "fstring_literal",
+          "named": true
+        },
+        {
+          "type": "identifier",
+          "named": true
+        },
+        {
+          "type": "if_expr",
+          "named": true
+        },
+        {
+          "type": "if_stmt",
+          "named": true
+        },
+        {
+          "type": "index_expr",
+          "named": true
+        },
+        {
+          "type": "integer_literal",
+          "named": true
+        },
+        {
+          "type": "list_comprehension",
+          "named": true
+        },
+        {
+          "type": "list_literal",
+          "named": true
+        },
+        {
+          "type": "match_expr",
+          "named": true
+        },
+        {
+          "type": "none_literal",
+          "named": true
+        },
+        {
+          "type": "null_coalesce_expr",
+          "named": true
+        },
+        {
+          "type": "null_expr",
+          "named": true
+        },
+        {
+          "type": "paren_expr",
+          "named": true
+        },
+        {
+          "type": "pipe_expr",
+          "named": true
+        },
+        {
+          "type": "range_expr",
+          "named": true
+        },
+        {
+          "type": "self_expr",
+          "named": true
+        },
+        {
+          "type": "string_literal",
+          "named": true
+        },
+        {
+          "type": "struct_literal",
+          "named": true
+        },
+        {
+          "type": "tuple_expr",
+          "named": true
+        },
+        {
+          "type": "unary_expr",
+          "named": true
+        },
+        {
+          "type": "unit_literal",
+          "named": true
+        },
+        {
+          "type": "unwrap_expr",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "state_machine_block",
     "named": true,
     "fields": {},
@@ -10458,6 +11351,10 @@
             "named": true
           },
           {
+            "type": "heapless_type",
+            "named": true
+          },
+          {
             "type": "list_type",
             "named": true
           },
@@ -10484,6 +11381,10 @@
           {
             "type": "tuple_type",
             "named": true
+          },
+          {
+            "type": "unit_type",
+            "named": true
           }
         ]
       },
@@ -10498,6 +11399,11 @@
         ]
       }
     }
+  },
+  {
+    "type": "string_literal",
+    "named": true,
+    "fields": {}
   },
   {
     "type": "struct_decl",
@@ -10730,6 +11636,10 @@
             "named": true
           },
           {
+            "type": "heapless_type",
+            "named": true
+          },
+          {
             "type": "list_type",
             "named": true
           },
@@ -10756,6 +11666,10 @@
           {
             "type": "tuple_type",
             "named": true
+          },
+          {
+            "type": "unit_type",
+            "named": true
           }
         ]
       }
@@ -10765,6 +11679,16 @@
     "type": "struct_literal",
     "named": true,
     "fields": {
+      "module": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      },
       "type": {
         "multiple": false,
         "required": true,
@@ -11059,6 +11983,16 @@
           }
         ]
       },
+      "effects": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "effect_list",
+            "named": true
+          }
+        ]
+      },
       "name": {
         "multiple": false,
         "required": true,
@@ -11090,6 +12024,10 @@
             "named": true
           },
           {
+            "type": "heapless_type",
+            "named": true
+          },
+          {
             "type": "list_type",
             "named": true
           },
@@ -11115,6 +12053,10 @@
           },
           {
             "type": "tuple_type",
+            "named": true
+          },
+          {
+            "type": "unit_type",
             "named": true
           }
         ]
@@ -11391,6 +12333,10 @@
           "named": true
         },
         {
+          "type": "heapless_type",
+          "named": true
+        },
+        {
           "type": "list_type",
           "named": true
         },
@@ -11416,6 +12362,10 @@
         },
         {
           "type": "tuple_type",
+          "named": true
+        },
+        {
+          "type": "unit_type",
           "named": true
         }
       ]
@@ -11607,6 +12557,11 @@
     "fields": {}
   },
   {
+    "type": "unit_type",
+    "named": true,
+    "fields": {}
+  },
+  {
     "type": "unsafe_discharge_stmt",
     "named": true,
     "fields": {
@@ -11786,12 +12741,172 @@
           }
         ]
       },
+      "attrs": {
+        "multiple": true,
+        "required": false,
+        "types": [
+          {
+            "type": "attribute",
+            "named": true
+          }
+        ]
+      },
       "path": {
         "multiple": false,
         "required": true,
         "types": [
           {
             "type": "module_path",
+            "named": true
+          }
+        ]
+      },
+      "visibility": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "pub",
+            "named": false
+          }
+        ]
+      }
+    }
+  },
+  {
+    "type": "var_arg",
+    "named": true,
+    "fields": {
+      "value": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "await_expr",
+            "named": true
+          },
+          {
+            "type": "binary_expr",
+            "named": true
+          },
+          {
+            "type": "bool_literal",
+            "named": true
+          },
+          {
+            "type": "bsp_ns",
+            "named": true
+          },
+          {
+            "type": "call_expr",
+            "named": true
+          },
+          {
+            "type": "cast_expr",
+            "named": true
+          },
+          {
+            "type": "char_literal",
+            "named": true
+          },
+          {
+            "type": "closure_expr",
+            "named": true
+          },
+          {
+            "type": "field_access",
+            "named": true
+          },
+          {
+            "type": "float_literal",
+            "named": true
+          },
+          {
+            "type": "fstring_literal",
+            "named": true
+          },
+          {
+            "type": "identifier",
+            "named": true
+          },
+          {
+            "type": "if_expr",
+            "named": true
+          },
+          {
+            "type": "if_stmt",
+            "named": true
+          },
+          {
+            "type": "index_expr",
+            "named": true
+          },
+          {
+            "type": "integer_literal",
+            "named": true
+          },
+          {
+            "type": "list_comprehension",
+            "named": true
+          },
+          {
+            "type": "list_literal",
+            "named": true
+          },
+          {
+            "type": "match_expr",
+            "named": true
+          },
+          {
+            "type": "none_literal",
+            "named": true
+          },
+          {
+            "type": "null_coalesce_expr",
+            "named": true
+          },
+          {
+            "type": "null_expr",
+            "named": true
+          },
+          {
+            "type": "paren_expr",
+            "named": true
+          },
+          {
+            "type": "pipe_expr",
+            "named": true
+          },
+          {
+            "type": "range_expr",
+            "named": true
+          },
+          {
+            "type": "self_expr",
+            "named": true
+          },
+          {
+            "type": "string_literal",
+            "named": true
+          },
+          {
+            "type": "struct_literal",
+            "named": true
+          },
+          {
+            "type": "tuple_expr",
+            "named": true
+          },
+          {
+            "type": "unary_expr",
+            "named": true
+          },
+          {
+            "type": "unit_literal",
+            "named": true
+          },
+          {
+            "type": "unwrap_expr",
             "named": true
           }
         ]
@@ -12468,6 +13583,10 @@
     "named": true
   },
   {
+    "type": "clobber",
+    "named": false
+  },
+  {
     "type": "clobbers",
     "named": false
   },
@@ -12582,6 +13701,10 @@
     "named": false
   },
   {
+    "type": "input",
+    "named": false
+  },
+  {
     "type": "irq",
     "named": false
   },
@@ -12644,6 +13767,10 @@
   },
   {
     "type": "or",
+    "named": false
+  },
+  {
+    "type": "output",
     "named": false
   },
   {
@@ -12728,10 +13855,6 @@
     "named": false
   },
   {
-    "type": "string_literal",
-    "named": true
-  },
-  {
     "type": "struct",
     "named": false
   },
@@ -12753,6 +13876,14 @@
   },
   {
     "type": "true",
+    "named": false
+  },
+  {
+    "type": "tuple_index",
+    "named": true
+  },
+  {
+    "type": "type",
     "named": false
   },
   {
@@ -12781,6 +13912,10 @@
   },
   {
     "type": "while",
+    "named": false
+  },
+  {
+    "type": "words",
     "named": false
   },
   {

@@ -1,0 +1,57 @@
+==================
+a list literal with a splice between plain elements
+==================
+
+[1, ...p, 9]
+
+---
+
+(source_file
+  (expr_stmt
+    (list_literal
+      (integer_literal)
+      (splice_element
+        (identifier))
+      (integer_literal))))
+
+==================
+splices of a call and of a slice, with a trailing comma
+==================
+
+[0x02, ...bytes.u16_le_list(h), ...value[1:3],]
+
+---
+
+(source_file
+  (expr_stmt
+    (list_literal
+      (integer_literal)
+      (splice_element
+        (call_expr
+          callee: (field_access
+            value: (identifier)
+            field: (identifier))
+          (identifier)))
+      (splice_element
+        (index_expr
+          value: (identifier)
+          index: (slice_expr
+            start: (integer_literal)
+            stop: (integer_literal)))))))
+
+==================
+a splice of a list literal, and a splice that is the only element
+==================
+
+[...[1, 2], 3]
+
+---
+
+(source_file
+  (expr_stmt
+    (list_literal
+      (splice_element
+        (list_literal
+          (integer_literal)
+          (integer_literal)))
+      (integer_literal))))

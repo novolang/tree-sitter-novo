@@ -189,6 +189,22 @@ static bool line_carries_assignment(TSLexer *lexer) {
     }
 }
 
+/* Does the word `w` start here and end at a non-name character?  `or`
+ * and `and` are binary operators spelled as words, so a line that
+ * begins with one continues the line above (SPEC § 1.7, continuation
+ * rule 2) and `order` or `android` do not.  Reads ahead and answers;
+ * like `line_carries_assignment`, the caller re-lexes from the token
+ * start, so nothing here is consumed on the parser's behalf. */
+static bool word_follows(TSLexer *lexer, const char *w) {
+    for (; *w; w++) {
+        if (lexer->lookahead != (int32_t)*w) return false;
+        advance(lexer);
+    }
+    int32_t c = lexer->lookahead;
+    return !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+             (c >= '0' && c <= '9') || c == '_');
+}
+
 bool tree_sitter_novo_external_scanner_scan(
     void *payload, TSLexer *lexer, const bool *valid_symbols
 ) {
@@ -444,6 +460,22 @@ bool tree_sitter_novo_external_scanner_scan(
      * file still parses. */
     if (indent > top) {
         int32_t c = lexer->lookahead;
+        /* A `-` hugging its operand, `-1` or `-n`, is a negation, and
+         * a negation begins a statement or a match arm.  SPEC § 1.7
+         * says `-` starts a fresh statement after a line that opened a
+         * block (`match n` over `-128..=-1 => 1`, `fn negate(n)` over
+         * `-n`); the scanner cannot tell a header from the middle of an
+         * expression, so it reads the spelling instead: a binary minus
+         * that continues a line is written with a space after it
+         * (`- 3`), and `-=` and `->` never hug an operand. */
+        if (c == '-') {
+            advance(lexer);
+            int32_t d = lexer->lookahead;
+            bool hugs = (d >= '0' && d <= '9') || d == '_' || d == '(' ||
+                        (d >= 'a' && d <= 'z') || (d >= 'A' && d <= 'Z');
+            if (!hugs) return false;
+            c = 0; /* not an operator that continues the line */
+        }
         if (c == '+' || c == '-' || c == '*' || c == '/' || c == '%' ||
             c == '|' || c == '&' || c == '^' || c == '<' || c == '>' ||
             c == '=' || c == '!' || c == '?' || c == '.') {
@@ -451,6 +483,12 @@ bool tree_sitter_novo_external_scanner_scan(
              * whitespace+newline as extras and the binary operator
              * tokenises normally on the same logical line. */
             if (c != '*' || !line_carries_assignment(lexer)) return false;
+        }
+        /* `and` / `or` begin a continuation in the same way.  Neither
+         * can begin a statement, so no block-header exception applies. */
+        if ((c == 'a' && word_follows(lexer, "and")) ||
+            (c == 'o' && word_follows(lexer, "or"))) {
+            return false;
         }
     }
 

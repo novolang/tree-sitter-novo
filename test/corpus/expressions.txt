@@ -257,3 +257,51 @@ let xs = [1, 2, 3]
       (integer_literal)
       (integer_literal)
       (integer_literal))))
+
+==================
+a triple-quoted string has a raw body and spans lines
+==================
+
+fn show()
+    println("""a\d\n b""")
+    let t = """head ${a}
+        more "quoted" and $x
+    end"""
+    let e = ""
+
+---
+
+(source_file
+  (fn_decl
+    name: (identifier)
+    params: (param_list)
+    body: (block
+      (expr_stmt
+        (call_expr
+          callee: (identifier)
+          (string_literal)))
+      (let_stmt
+        name: (identifier)
+        value: (string_literal))
+      (let_stmt
+        name: (identifier)
+        value: (string_literal)))))
+
+==================
+a dollar before an escape does not end the string
+==================
+
+fn q()
+    println("select(.a ~= \"b$\")")
+
+---
+
+(source_file
+  (fn_decl
+    name: (identifier)
+    params: (param_list)
+    body: (block
+      (expr_stmt
+        (call_expr
+          callee: (identifier)
+          (string_literal))))))

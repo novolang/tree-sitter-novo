@@ -623,3 +623,49 @@ fn f(v: ?Int) -> Int
                   (break_stmt)))))))
       (expr_stmt
         (integer_literal)))))
+
+================================================================
+range patterns with hex and negative bounds
+================================================================
+
+fn f(x: Int) -> Int
+    match x
+        0x80..=2047 => 1
+        -128..=-1 => 2
+        -5 => 3
+        _ => 0
+
+----
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list
+      (param
+        (identifier)
+        (named_type
+          (identifier))))
+    (named_type
+      (identifier))
+    (block
+      (expr_stmt
+        (match_expr
+          (identifier)
+          (match_block
+            (match_arm
+              (range_pattern
+                (integer_literal)
+                (integer_literal))
+              (integer_literal))
+            (match_arm
+              (range_pattern
+                (integer_literal)
+                (integer_literal))
+              (integer_literal))
+            (match_arm
+              (literal_pattern
+                (integer_literal))
+              (integer_literal))
+            (match_arm
+              (wildcard_pattern)
+              (integer_literal))))))))

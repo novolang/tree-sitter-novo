@@ -1,0 +1,65 @@
+==================
+tuple position as a call argument
+==================
+
+f(a, p.0, p.1)
+
+---
+
+(source_file
+  (expr_stmt
+    (call_expr
+      (identifier)
+      (identifier)
+      (field_access
+        (identifier)
+        (tuple_index))
+      (field_access
+        (identifier)
+        (tuple_index)))))
+
+==================
+qualified struct literal
+==================
+
+x = csip.CoordSend { link: link }
+
+---
+
+(source_file
+  (expr_stmt
+    (assignment_stmt
+      (identifier)
+      (struct_literal
+        (identifier)
+        (identifier)
+        (struct_literal_field
+          (identifier)
+          (identifier))))))
+
+==================
+qualified struct literal as a call argument
+==================
+
+list.push(out, csip.CoordSend { link: link, pdu: pdu[:] })
+
+---
+
+(source_file
+  (expr_stmt
+    (call_expr
+      (field_access
+        (identifier)
+        (identifier))
+      (identifier)
+      (struct_literal
+        (identifier)
+        (identifier)
+        (struct_literal_field
+          (identifier)
+          (identifier))
+        (struct_literal_field
+          (identifier)
+          (index_expr
+            (identifier)
+            (slice_expr)))))))

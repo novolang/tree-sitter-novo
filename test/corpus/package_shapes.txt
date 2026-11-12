@@ -1,0 +1,198 @@
+================================================================================
+an attribute argument that is a condition over a config constant
+================================================================================
+
+@when(cfg.PERIPHERAL > 0)
+fn adv() -> Int
+    1
+
+@when(cfg.A >= 2 and (cfg.B == 1 or not cfg.C))
+fn both() -> Int
+    2
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (fn_decl
+    (attribute
+      (identifier)
+      (identifier)
+      (identifier)
+      (integer_literal))
+    (identifier)
+    (param_list)
+    (named_type
+      (identifier))
+    (block
+      (expr_stmt
+        (integer_literal))))
+  (fn_decl
+    (attribute
+      (identifier)
+      (identifier)
+      (identifier)
+      (integer_literal)
+      (identifier)
+      (identifier)
+      (integer_literal)
+      (identifier)
+      (identifier))
+    (identifier)
+    (param_list)
+    (named_type
+      (identifier))
+    (block
+      (expr_stmt
+        (integer_literal)))))
+
+================================================================================
+a trait bound named through a module, with its effect argument
+================================================================================
+
+fn add_device<P: dis_policy.DisPolicy[e]>(var db: Int, var info: P) [e]
+    db
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (fn_decl
+    (identifier)
+    (type_params
+      (type_param
+        (identifier)
+        (identifier)
+        (identifier)
+        (effect_list
+          (identifier))))
+    (param_list
+      (param
+        (identifier)
+        (named_type
+          (identifier)))
+      (param
+        (identifier)
+        (named_type
+          (identifier))))
+    (effect_list
+      (identifier))
+    (block
+      (expr_stmt
+        (identifier)))))
+
+================================================================================
+a struct field named frame
+================================================================================
+
+pub struct Step
+    reasm: Reasm
+    frame: ?Frame
+    error: ?Err
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (struct_decl
+    (identifier)
+    (block
+      (struct_field
+        (identifier)
+        (named_type
+          (identifier)))
+      (struct_field
+        (identifier)
+        (optional_type
+          (named_type
+            (identifier))))
+      (struct_field
+        (identifier)
+        (optional_type
+          (named_type
+            (identifier)))))))
+
+================================================================================
+a tuple index as the body of a match arm
+================================================================================
+
+fn first(b: [u8]) -> Int
+    match next(b)
+        Some(r) => r.0
+        None => 0
+
+fn range_is(b: [u8], lo: Int) -> Bool
+    match decode(b)
+        Some(r) => r.0 == lo and r.1 == lo
+        None => false
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list
+      (param
+        (identifier)
+        (list_type
+          (named_type
+            (identifier)))))
+    (named_type
+      (identifier))
+    (block
+      (expr_stmt
+        (match_expr
+          (call_expr
+            (identifier)
+            (identifier))
+          (match_block
+            (match_arm
+              (constructor_pattern
+                (identifier)
+                (identifier_pattern
+                  (identifier)))
+              (field_access
+                (identifier)
+                (tuple_index)))
+            (match_arm
+              (literal_pattern
+                (none_literal))
+              (integer_literal)))))))
+  (fn_decl
+    (identifier)
+    (param_list
+      (param
+        (identifier)
+        (list_type
+          (named_type
+            (identifier))))
+      (param
+        (identifier)
+        (named_type
+          (identifier))))
+    (named_type
+      (identifier))
+    (block
+      (expr_stmt
+        (match_expr
+          (call_expr
+            (identifier)
+            (identifier))
+          (match_block
+            (match_arm
+              (constructor_pattern
+                (identifier)
+                (identifier_pattern
+                  (identifier)))
+              (binary_expr
+                (binary_expr
+                  (field_access
+                    (identifier)
+                    (tuple_index))
+                  (identifier))
+                (binary_expr
+                  (field_access
+                    (identifier)
+                    (tuple_index))
+                  (identifier))))
+            (match_arm
+              (literal_pattern
+                (none_literal))
+              (bool_literal))))))))

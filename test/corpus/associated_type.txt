@@ -1,0 +1,61 @@
+================================================================================
+the associated type of a trait, abstract and with a default
+================================================================================
+
+trait Iter
+    type Item
+    type Out = Str
+    fn next(var self) -> ?Item
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (trait_decl
+    (identifier)
+    (block
+      (associated_type
+        (identifier))
+      (associated_type
+        (identifier)
+        (named_type
+          (identifier)))
+      (fn_decl
+        (identifier)
+        (param_list
+          (self_param))
+        (optional_type
+          (named_type
+            (identifier)))))))
+
+================================================================================
+the associated type of an impl is a binding
+================================================================================
+
+impl Iter for Counter
+    type Item = Int
+    fn next(var self) -> ?Int
+        None
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (impl_decl
+    (named_type
+      (identifier))
+    (named_type
+      (identifier))
+    (block
+      (associated_type
+        (identifier)
+        (named_type
+          (identifier)))
+      (fn_decl
+        (identifier)
+        (param_list
+          (self_param))
+        (optional_type
+          (named_type
+            (identifier)))
+        (block
+          (expr_stmt
+            (none_literal)))))))

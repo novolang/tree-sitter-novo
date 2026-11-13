@@ -282,7 +282,11 @@ fn show()
           (string_literal)))
       (let_stmt
         name: (identifier)
-        value: (string_literal))
+        value: (fstring_literal
+          (fstring_segment)
+          (fstring_interp
+            expr: (identifier))
+          (fstring_segment)))
       (let_stmt
         name: (identifier)
         value: (string_literal)))))

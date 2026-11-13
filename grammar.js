@@ -47,6 +47,13 @@ module.exports = grammar({
     // `}` that may follow an empty spec is not an immediate token, so
     // `extras` is consulted at the position right after the `:`.
     $.fstring_format_spec,
+    // The text between the delimiters of a triple-quoted string that
+    // holds a `${...}` hole, scanned for the same reason as
+    // `fstring_segment`.  It is told apart from that one by the state
+    // it is asked in: the body is raw, so a lone quote and a backslash
+    // are text, and the string ends at the first run of three quotes.
+    // It takes the node name `fstring_segment` (see `fstring_literal`).
+    $._tstring_segment,
   ],
 
   // Whitespace + newlines + comments — all "ignored" at this
@@ -131,11 +138,6 @@ module.exports = grammar({
       $.frame_decl,
       $.prompt_decl,
       $.unsafe_discharge_stmt,
-      // Bare `x: Type` and `Variant(...)` lines that appear inside
-      // struct / enum bodies — kept as a top-level alternative for
-      // robustness even though slice 5c+ nests them under their
-      // parent decl via the external scanner.
-      $.struct_field,
       $.let_stmt,
       $.return_stmt,
       $.break_stmt,
@@ -404,8 +406,21 @@ module.exports = grammar({
       'struct',
       field('name', $.identifier),
       optional(field('type_params', $.type_params)),
-      optional(field('body', $.block)),
+      optional(field('body', $.struct_body)),
     )),
+
+    // The fields of a struct, one per line.  It is its own rule and not
+    // a `block` so that a function body never offers `struct_field`:
+    // with the field rule in `block`, the typed binding
+    // `var dq: Deque<Reading> = Deque.new()` inside a function was a
+    // field (`name: Type = default` is the same shape as a typed
+    // binding without its keyword) and `let_stmt` lost the conflict.
+    // bugs/tooling/closed/the-tree-sitter-grammar-reads-a-typed-var-binding-in-a-block-as-a-struct-field.md
+    struct_body: $ => seq(
+      $._indent,
+      repeat(seq($.struct_field, optional($._newline))),
+      $._dedent,
+    ),
 
     // enum body is a list of variant declarations (`Circle`,
     // `Circle(radius: Float)`, `ExSubquery(e: Expr, neg: Bool)`).
@@ -532,7 +547,29 @@ module.exports = grammar({
       // type-parameter list above and gives the same tree as before.
       optional(field('effects', $.effect_list)),
       optional(seq(':', field('supertraits', sepBy1('+', $._type_expr)))),
-      optional(field('body', $.block)),
+      optional(field('body', alias($._member_block, $.block))),
+    )),
+
+    // The body of a trait or an impl.  It is a `block` to every query
+    // (the alias) and takes the associated type that SPEC § 3.7.1 puts
+    // in front of the functions: `type Item` declares one and
+    // `type Item = Int` binds one.  A function body never offers it.
+    // bugs/tooling/closed/an-associated-type-in-a-trait-body-is-a-plain-statement-to-the-tree-sitter-grammar.md
+    _member_block: $ => seq(
+      $._indent,
+      repeat(seq(choice($.associated_type, $._top_level), optional($._newline))),
+      $._dedent,
+    ),
+
+    // `type Item` (abstract, in a trait) and `type Out = Str` (a default
+    // in a trait, the binding in an impl).  `alias` is the one spelling
+    // of a type alias; `type` is reserved for this member and for
+    // `peripheral type`.  Bounded and higher-kinded forms are deferred
+    // by the language (SPEC § 3.7.1).
+    associated_type: $ => prec.right(seq(
+      'type',
+      field('name', $.identifier),
+      optional(seq('=', field('value', $._type_expr))),
     )),
 
     // `impl T` (inherent impl) or `impl Trait for T` (trait impl).
@@ -546,7 +583,7 @@ module.exports = grammar({
       field('subject', $._ret_type),
       optional(field('effects', $.effect_list)),
       optional(seq('for', field('target', $._type_expr))),
-      optional(field('body', $.block)),
+      optional(field('body', alias($._member_block, $.block))),
     )),
 
     // M29 state machines.  Header is `state_machine Name`, body is
@@ -969,6 +1006,10 @@ module.exports = grammar({
     // widened `name` field.
     let_stmt: $ => choice(
       seq(
+        // A package-level binding may carry annotations
+        // (`@when(cfg.X > 0)` over `var CS_AIR: T = e`), which the
+        // grammar used to read as a struct field with attributes.
+        optional(field('attrs', repeat1($.attribute))),
         choice('let', 'var'),
         optional('mut'),
         // `_` lexes as its own token wherever a pattern may start, and
@@ -1992,9 +2033,14 @@ module.exports = grammar({
     // first run of three quotes.  It is one lexeme, so a comment
     // spelling inside it is text, and the longest match tells it from
     // an empty string followed by a string: `"""a"""` is one token
-    // of seven characters where `""` is two.  A `${...}` hole is part
-    // of the lexeme without being parsed, which is the cost of one
-    // token and fine for highlighting.
+    // of seven characters where `""` is two.
+    //
+    // A triple-quoted string with no `${` hole is this one token.  The
+    // body pattern (`tripleBody` below) refuses a `${`, so a string with
+    // a hole does not lex as a token here and falls through to
+    // `fstring_literal`, which parses the hole.  That is how an
+    // ordinary string and an f-string are told apart too.
+    // bugs/tooling/closed/a-hole-inside-a-triple-quoted-string-is-not-parsed-by-the-tree-sitter-grammar.md
     string_literal: $ => choice(
       token(seq(
         '"',
@@ -2010,7 +2056,7 @@ module.exports = grammar({
         optional('$'),
         '"',
       )),
-      token(seq('"""', /([^"]|"[^"]|""[^"])*/, '"""')),
+      token(seq('"""', tripleBody(), '"""')),
     ),
 
     // F-string with `${expr}` interpolation.  Structured so
@@ -2019,13 +2065,27 @@ module.exports = grammar({
     // disambiguation: any `"…${…}…"` source fails the
     // string_literal regex above (the `${` match fails because
     // `\$[^{"]` requires non-`{` next), so falls through here.
-    fstring_literal: $ => seq(
-      $._fstring_open,
-      repeat(choice(
-        $.fstring_segment,
-        $.fstring_interp,
-      )),
-      $._fstring_close,
+    //
+    // A triple-quoted string with a hole is the same node: the segments
+    // are the text, the holes are `fstring_interp`, and only the
+    // delimiters differ.
+    fstring_literal: $ => choice(
+      seq(
+        $._fstring_open,
+        repeat(choice(
+          $.fstring_segment,
+          $.fstring_interp,
+        )),
+        $._fstring_close,
+      ),
+      seq(
+        $._tstring_open,
+        repeat(choice(
+          alias($._tstring_segment, $.fstring_segment),
+          $.fstring_interp,
+        )),
+        $._tstring_close,
+      ),
     ),
 
     // Literal `"` opening / closing tokens for f-strings.  Marked
@@ -2034,6 +2094,8 @@ module.exports = grammar({
     // outer fstring_literal node).
     _fstring_open:  $ => '"',
     _fstring_close: $ => token.immediate('"'),
+    _tstring_open:  $ => '"""',
+    _tstring_close: $ => token.immediate('"""'),
 
     // `fstring_segment` — the plain text inside an f-string between
     // `${...}` interps — is an EXTERNAL token.  See `externals` at the
@@ -2069,6 +2131,35 @@ module.exports = grammar({
     none_literal: $ => 'None',
   },
 });
+
+// The body of a triple-quoted string that has no `${` hole: any run of
+// characters that holds neither a run of three quotes nor a `$` before a
+// `{`, and does not end in a quote (the quotes after it would then close
+// the string earlier).  A regular expression has no lookahead, so the
+// pattern is the automaton written out.  Its states, with `q` for `"`,
+// `d` for `$` and `a` for any other character:
+//
+//   S0  nothing pending          a -> S0   q -> Q1   d -> D
+//   Q1  one quote pending        a -> S0   q -> Q2   d -> D
+//   Q2  two quotes pending       a -> S0   d -> D
+//   D   a `$` pending            a, except `{` -> S0   q -> Q1   d -> D
+//
+// S0 and D accept.  Eliminating Q1 and Q2 leaves two states:
+//
+//   S0 -> S0  E1 = a | qa | qqa        S0 -> D  E2 = d | qd | qqd
+//   D  -> S0  E3 = o | qa | qqa        D  -> D  E2
+//
+// with `a` meaning any character but `"` and `$`, and `o` any character
+// but `"`, `$` and `{`.
+function tripleBody() {
+  const a = '[^"$]';
+  const o = '[^"${]';
+  const e1 = `(?:${a}|"${a}|""${a})`;
+  const e2 = '(?:\\$|"\\$|""\\$)';
+  const e3 = `(?:${o}|"${a}|""${a})`;
+  const x = `${e1}*`;
+  return new RegExp(`${x}(?:${e2}(?:${e2}|${e3}${x}${e2})*(?:${e3}${x})?)?`);
+}
 
 // Annotations and `pub`, in either order, for a declaration that takes
 // both.

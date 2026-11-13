@@ -1,0 +1,127 @@
+================================================================
+a minus that hugs its operand continues a line that opened no block
+================================================================
+
+fn e(a: Int, b: Int) -> Int
+    let x = a
+        -b
+    let y = a
+        *b
+    x
+
+---
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list
+      (param
+        (identifier)
+        (named_type
+          (identifier)))
+      (param
+        (identifier)
+        (named_type
+          (identifier))))
+    (named_type
+      (identifier))
+    (block
+      (let_stmt
+        (identifier)
+        (binary_expr
+          (identifier)
+          (identifier)))
+      (let_stmt
+        (identifier)
+        (binary_expr
+          (identifier)
+          (identifier)))
+      (expr_stmt
+        (identifier)))))
+
+================================================================
+a minus that hugs its operand begins the body under a block header
+================================================================
+
+fn f(n: Int) -> Int
+    if n > 0
+        -n
+    -n
+
+---
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list
+      (param
+        (identifier)
+        (named_type
+          (identifier))))
+    (named_type
+      (identifier))
+    (block
+      (if_stmt
+        (binary_expr
+          (identifier)
+          (integer_literal))
+        (block
+          (expr_stmt
+            (unary_expr
+              (identifier)))))
+      (expr_stmt
+        (unary_expr
+          (identifier))))))
+
+================================================================
+a pointer store is a statement under a header and a product elsewhere
+================================================================
+
+fn g(p: *Int, a: Int, b: Int, c: Bool) -> Int
+    if c
+        *p = 1
+    let w = a
+        *b
+    w
+
+---
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list
+      (param
+        (identifier)
+        (pointer_type
+          (named_type
+            (identifier))))
+      (param
+        (identifier)
+        (named_type
+          (identifier)))
+      (param
+        (identifier)
+        (named_type
+          (identifier)))
+      (param
+        (identifier)
+        (named_type
+          (identifier))))
+    (named_type
+      (identifier))
+    (block
+      (if_stmt
+        (identifier)
+        (block
+          (expr_stmt
+            (assignment_stmt
+              (deref_target
+                (identifier))
+              (integer_literal)))))
+      (let_stmt
+        (identifier)
+        (binary_expr
+          (identifier)
+          (identifier)))
+      (expr_stmt
+        (identifier)))))

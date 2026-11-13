@@ -93,7 +93,7 @@ pub struct Step
 (source_file
   (struct_decl
     (identifier)
-    (block
+    (struct_body
       (struct_field
         (identifier)
         (named_type

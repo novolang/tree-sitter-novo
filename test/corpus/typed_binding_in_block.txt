@@ -1,0 +1,124 @@
+================================================================================
+a typed var binding in a function body is a let_stmt
+================================================================================
+
+fn f() -> Bool
+    var q: Deque<Int> = Deque.new()
+    let n: Int = 3
+    true
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list)
+    (named_type
+      (identifier))
+    (block
+      (let_stmt
+        (identifier)
+        (generic_type
+          (identifier)
+          (named_type
+            (identifier)))
+        (call_expr
+          (field_access
+            (identifier)
+            (identifier))))
+      (let_stmt
+        (identifier)
+        (named_type
+          (identifier))
+        (integer_literal))
+      (expr_stmt
+        (bool_literal)))))
+
+================================================================================
+a typed binding under an if is a let_stmt, a struct body keeps its fields
+================================================================================
+
+struct Reading
+    value: Int
+    var count: Int = 0
+
+fn g(flag: Bool)
+    if flag
+        var dq: Deque<Reading> = Deque.new()
+        dq.len()
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (struct_decl
+    (identifier)
+    (struct_body
+      (struct_field
+        (identifier)
+        (named_type
+          (identifier)))
+      (struct_field
+        (identifier)
+        (named_type
+          (identifier))
+        (integer_literal))))
+  (fn_decl
+    (identifier)
+    (param_list
+      (param
+        (identifier)
+        (named_type
+          (identifier))))
+    (block
+      (if_stmt
+        (identifier)
+        (block
+          (let_stmt
+            (identifier)
+            (generic_type
+              (identifier)
+              (named_type
+                (identifier)))
+            (call_expr
+              (field_access
+                (identifier)
+                (identifier))))
+          (expr_stmt
+            (call_expr
+              (field_access
+                (identifier)
+                (identifier)))))))))
+
+================================================================================
+a package-level binding carries its annotations
+================================================================================
+
+@when(cfg.X > 0)
+var CS_AIR: Air = air_new()
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (let_stmt
+    (attribute
+      (identifier)
+      (identifier)
+      (identifier)
+      (integer_literal))
+    (identifier)
+    (named_type
+      (identifier))
+    (call_expr
+      (identifier))))
+
+================================================================================
+a field-shaped line outside a struct body is not a field
+:error
+================================================================================
+
+fn h()
+    x: Int
+
+--------------------------------------------------------------------------------
+
+

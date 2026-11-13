@@ -110,7 +110,7 @@ struct Wrap<T: Greet>
       (type_param
         (identifier)
         (identifier)))
-    body: (block
+    body: (struct_body
       (struct_field
         name: (identifier)
         type: (named_type
@@ -268,7 +268,7 @@ struct Hdr
     attrs: (attribute
       (identifier))
     name: (identifier)
-    body: (block
+    body: (struct_body
       (struct_field
         attrs: (attribute
           (identifier))

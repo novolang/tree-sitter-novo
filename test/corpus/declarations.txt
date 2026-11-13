@@ -297,7 +297,7 @@ pub const LIMIT = 10
 (source_file
   (struct_decl
     name: (identifier)
-    body: (block
+    body: (struct_body
       (struct_field
         name: (identifier)
         type: (named_type

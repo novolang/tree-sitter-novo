@@ -49,6 +49,7 @@ enum TokenType {
     DEDENT,
     FSTRING_SEGMENT,
     FSTRING_FORMAT,
+    TSTRING_SEGMENT,
 };
 
 typedef struct {
@@ -121,72 +122,6 @@ static inline bool is_op_char(int32_t c) {
     return c == '=' || c == '<' || c == '>' || c == '!' || c == '+' ||
            c == '-' || c == '*' || c == '/' || c == '%' || c == '&' ||
            c == '|' || c == '^';
-}
-
-/* Is `run` an ASSIGNMENT operator?  `=` and the compound forms, and
- * nothing that merely ends in `=`: `==`, `<=`, `>=` and `!=` compare,
- * and `=>` does not end in `=` at all. */
-static bool op_run_is_assign(const char *run, unsigned n) {
-    if (n == 0 || run[n - 1] != '=') return false;
-    if (n == 2 && (run[0] == '=' || run[0] == '<' ||
-                   run[0] == '>' || run[0] == '!')) return false;
-    return true;
-}
-
-/* Does the rest of this SOURCE LINE carry an assignment outside every
- * bracket, quote and comment?
- *
- * This is the question that separates the two constructs a
- * statement-initial `*` can begin.  `* b + c` continues the expression
- * on the line above; `*p = v` stores through a raw pointer, and no
- * continuation line can carry a top-level assignment — the operator
- * would have nothing to assign to.  The scanner reads the line rather
- * than asking the parser what it expects, because the parser's
- * expectations do not separate these: `valid_symbols[INDENT]` is true
- * mid-expression as well (measured, seven files), and
- * `valid_symbols[NEWLINE]` is true after `if c` because the grammar
- * makes every body optional so that a truncated file still parses.
- *
- * Reads ahead and answers; the caller returns false either way when it
- * decides the line is a continuation, and tree-sitter re-lexes from the
- * token start, so nothing here is consumed on the parser's behalf. */
-static bool line_carries_assignment(TSLexer *lexer) {
-    int depth = 0;
-    char run[8];
-    for (;;) {
-        int32_t c = lexer->lookahead;
-        if (lexer->eof(lexer) || c == '\n' || c == '\r') return false;
-        if (c == '"' || c == '\'') {
-            int32_t quote = c;
-            advance(lexer);
-            while (!lexer->eof(lexer) && lexer->lookahead != quote &&
-                   lexer->lookahead != '\n' && lexer->lookahead != '\r') {
-                if (lexer->lookahead == '\\') advance(lexer);
-                if (lexer->eof(lexer)) return false;
-                advance(lexer);
-            }
-            if (lexer->lookahead == quote) advance(lexer);
-            continue;
-        }
-        if (c == '/') {
-            advance(lexer);
-            /* `//` opens a comment: the rest of the line is prose. */
-            if (lexer->lookahead == '/') return false;
-            continue;
-        }
-        if (c == '(' || c == '[' || c == '{') { depth++; advance(lexer); continue; }
-        if (c == ')' || c == ']' || c == '}') { depth--; advance(lexer); continue; }
-        if (is_op_char(c)) {
-            unsigned n = 0;
-            while (is_op_char(lexer->lookahead) && n < sizeof(run)) {
-                run[n++] = (char)lexer->lookahead;
-                advance(lexer);
-            }
-            if (depth <= 0 && op_run_is_assign(run, n)) return true;
-            continue;
-        }
-        advance(lexer);
-    }
 }
 
 /* Does the word `w` start here and end at a non-name character?  `or`
@@ -288,6 +223,62 @@ bool tree_sitter_novo_external_scanner_scan(
         }
         if (any) {
             lexer->result_symbol = FSTRING_SEGMENT;
+            return true;
+        }
+        return false;
+    }
+
+    /* ── A TRIPLE-QUOTED STRING WITH A HOLE ─────────────────────────
+     * The text of a triple-quoted string that holds a `${a + b}` hole
+     * is a scanned region for the reason the f-string's is, and it is
+     * told apart from that one by the symbol the parser asks for:
+     * TSTRING_SEGMENT is valid only between the delimiters of a
+     * triple-quoted string.
+     *
+     * The body is raw (SPEC § 1.5), so a backslash is an ordinary
+     * character here and a single quote or two are text.  The segment
+     * ends before a `${`, which the grammar owns, and before a run of
+     * three quotes, which closes the string.  The quotes of a shorter
+     * run are looked at before the segment takes them, so `mark_end`
+     * moves past them only once a character that is not a quote
+     * follows.
+     *
+     * The error-recovery guard is the one above. */
+    if (valid_symbols[TSTRING_SEGMENT] &&
+        !(valid_symbols[NEWLINE] && valid_symbols[INDENT] &&
+          valid_symbols[DEDENT])) {
+        bool any = false;
+        for (;;) {
+            int32_t c = lexer->lookahead;
+            if (lexer->eof(lexer)) break;
+            if (c == '"') {
+                unsigned run = 0;
+                while (lexer->lookahead == '"' && run < 3) {
+                    advance(lexer);
+                    run++;
+                }
+                if (run == 3) break;
+                if (lexer->eof(lexer)) break;
+                /* One or two quotes and then something else: all text. */
+                any = true;
+                lexer->mark_end(lexer);
+                continue;
+            }
+            if (c == '$') {
+                advance(lexer);
+                /* `${` belongs to the grammar.  mark_end still points
+                 * before the `$`, so the segment ends there. */
+                if (lexer->lookahead == '{') break;
+                any = true;
+                lexer->mark_end(lexer);
+                continue;
+            }
+            advance(lexer);
+            any = true;
+            lexer->mark_end(lexer);
+        }
+        if (any) {
+            lexer->result_symbol = TSTRING_SEGMENT;
             return true;
         }
         return false;
@@ -441,48 +432,44 @@ bool tree_sitter_novo_external_scanner_scan(
      * Without this rule the lines starting with `+` would be
      * unparseable (no rule starts with a binary operator).
      *
-     * ONE OF THOSE LEADERS IS TWO CONSTRUCTS.  `*` begins a
-     * continuation (`* b + c`) and it begins a raw-pointer store
-     * (`*p = 1`), and the lookahead cannot tell them apart, so the
-     * store lost: it produced ERROR nodes in every position, and the
-     * enclosing `if` misparsed with it — `c`, `*p` and the next `*p`
-     * collapsed into one binary chain and the `if` ended up with a
-     * multi-line condition and no body.
+     * SIX OF THOSE LEADERS ARE TWO CONSTRUCTS.  `+`, `-`, `*`, `&`, `|`
+     * and `.` continue a line and they also begin a statement: `-n`
+     * and `*p = v` are the body of the block a header opened, and
+     * SPEC § 1.7 (continuation rule 2) says which reading holds.  After
+     * a line that opened a block they begin the statement; after any
+     * other line they continue it.
      *
-     * The line decides.  A continuation line cannot carry an
-     * assignment outside its brackets — a leading binary operator has
-     * nothing to assign to — so `line_carries_assignment` separates
-     * them, and it reads source rather than guessing from the parser's
-     * state.  Neither `valid_symbols[INDENT]` nor
-     * `valid_symbols[NEWLINE]` can do this: the first is true
-     * mid-expression as well, and the second is true after `if c`
-     * because the grammar makes every body optional so a truncated
-     * file still parses. */
+     * The parser is the one that knows which line it is.  A block
+     * header is the place a body may begin, so `_indent` is a valid
+     * symbol there, and in the middle of an expression it is not.  The
+     * scanner used to read the spelling instead: a `-` hugging its
+     * operand began a statement, so `-b` on the line under
+     * `let x = a` was one (SPEC: a continuation), and a `*` was told
+     * from a store by reading the rest of the line for an assignment.
+     * Both reads are gone.  Parsing every source of the repository
+     * under the old reading and under this one gives the same trees
+     * except in two files that the sweep leaves out.
+     *
+     * A leader longer than one character (`->`, `|>`, `+=`, `*=`, `..`)
+     * cannot begin a statement and continues the line after a header
+     * as well. */
     if (indent > top) {
         int32_t c = lexer->lookahead;
-        /* A `-` hugging its operand, `-1` or `-n`, is a negation, and
-         * a negation begins a statement or a match arm.  SPEC § 1.7
-         * says `-` starts a fresh statement after a line that opened a
-         * block (`match n` over `-128..=-1 => 1`, `fn negate(n)` over
-         * `-n`); the scanner cannot tell a header from the middle of an
-         * expression, so it reads the spelling instead: a binary minus
-         * that continues a line is written with a space after it
-         * (`- 3`), and `-=` and `->` never hug an operand. */
-        if (c == '-') {
+        if (c == '+' || c == '-' || c == '*' || c == '&' || c == '|' ||
+            c == '.') {
             advance(lexer);
             int32_t d = lexer->lookahead;
-            bool hugs = (d >= '0' && d <= '9') || d == '_' || d == '(' ||
-                        (d >= 'a' && d <= 'z') || (d >= 'A' && d <= 'Z');
-            if (!hugs) return false;
-            c = 0; /* not an operator that continues the line */
+            bool longer = (c == '.') ? d == '.' : is_op_char(d);
+            if (longer) return false;
+            if (!valid_symbols[INDENT]) return false;
+            c = 0; /* begins a statement */
         }
-        if (c == '+' || c == '-' || c == '*' || c == '/' || c == '%' ||
-            c == '|' || c == '&' || c == '^' || c == '<' || c == '>' ||
-            c == '=' || c == '!' || c == '?' || c == '.') {
+        if (c == '/' || c == '%' || c == '^' || c == '<' || c == '>' ||
+            c == '=' || c == '!' || c == '?') {
             /* Don't consume — return false so the lexer treats the
              * whitespace+newline as extras and the binary operator
              * tokenises normally on the same logical line. */
-            if (c != '*' || !line_carries_assignment(lexer)) return false;
+            return false;
         }
         /* `and` / `or` begin a continuation in the same way.  Neither
          * can begin a statement, so no block-header exception applies. */

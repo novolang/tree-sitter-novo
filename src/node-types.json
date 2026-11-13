@@ -722,6 +722,76 @@
     }
   },
   {
+    "type": "associated_type",
+    "named": true,
+    "fields": {
+      "name": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      },
+      "value": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "fixed_array_type",
+            "named": true
+          },
+          {
+            "type": "fn_type",
+            "named": true
+          },
+          {
+            "type": "generic_type",
+            "named": true
+          },
+          {
+            "type": "heapless_type",
+            "named": true
+          },
+          {
+            "type": "list_type",
+            "named": true
+          },
+          {
+            "type": "modifier_type",
+            "named": true
+          },
+          {
+            "type": "named_type",
+            "named": true
+          },
+          {
+            "type": "optional_type",
+            "named": true
+          },
+          {
+            "type": "paren_type",
+            "named": true
+          },
+          {
+            "type": "pointer_type",
+            "named": true
+          },
+          {
+            "type": "tuple_type",
+            "named": true
+          },
+          {
+            "type": "unit_type",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
     "type": "attribute",
     "named": true,
     "fields": {},
@@ -1047,6 +1117,10 @@
           "named": true
         },
         {
+          "type": "associated_type",
+          "named": true
+        },
+        {
           "type": "break_stmt",
           "named": true
         },
@@ -1152,10 +1226,6 @@
         },
         {
           "type": "struct_decl",
-          "named": true
-        },
-        {
-          "type": "struct_field",
           "named": true
         },
         {
@@ -5987,6 +6057,16 @@
     "type": "let_stmt",
     "named": true,
     "fields": {
+      "attrs": {
+        "multiple": true,
+        "required": false,
+        "types": [
+          {
+            "type": "attribute",
+            "named": true
+          }
+        ]
+      },
       "else": {
         "multiple": false,
         "required": false,
@@ -10938,10 +11018,6 @@
           "named": true
         },
         {
-          "type": "struct_field",
-          "named": true
-        },
-        {
           "type": "system_stmt",
           "named": true
         },
@@ -11406,6 +11482,21 @@
     "fields": {}
   },
   {
+    "type": "struct_body",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "struct_field",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "struct_decl",
     "named": true,
     "fields": {
@@ -11424,7 +11515,7 @@
         "required": false,
         "types": [
           {
-            "type": "block",
+            "type": "struct_body",
             "named": true
           }
         ]
@@ -13335,6 +13426,10 @@
   },
   {
     "type": "\"",
+    "named": false
+  },
+  {
+    "type": "\"\"\"",
     "named": false
   },
   {

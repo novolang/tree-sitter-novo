@@ -25,7 +25,7 @@ fn take(var v: Vec[u8; 12]) -> Bool [hw, mutate]
       (identifier)
       (identifier))
     (block
-      (struct_field
+      (let_stmt
         (identifier)
         (heapless_type
           (identifier)
@@ -58,7 +58,7 @@ pub alias P = Vec[u8; max1(c.K)]
 (source_file
   (struct_decl
     (identifier)
-    (block
+    (struct_body
       (struct_field
         (identifier)
         (heapless_type
@@ -211,7 +211,7 @@ pub struct Store<D: Flash[e]>
     (named_type
       (identifier))
     (block
-      (struct_field
+      (let_stmt
         (identifier)
         (heapless_type
           (identifier)
@@ -234,7 +234,7 @@ pub struct Store<D: Flash[e]>
         (identifier)
         (effect_list
           (identifier))))
-    (block
+    (struct_body
       (struct_field
         (identifier)
         (generic_type
@@ -289,7 +289,7 @@ fn run()
     (identifier)
     (param_list)
     (block
-      (struct_field
+      (let_stmt
         (identifier)
         (generic_type
           (identifier)

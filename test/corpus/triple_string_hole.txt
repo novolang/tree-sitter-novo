@@ -1,0 +1,164 @@
+================================================================================
+a hole in a triple-quoted string is an interpolation
+================================================================================
+
+fn f(a: Int, b: Int) -> Str
+    let s = """total ${a + b}"""
+    s
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list
+      (param
+        (identifier)
+        (named_type
+          (identifier)))
+      (param
+        (identifier)
+        (named_type
+          (identifier))))
+    (named_type
+      (identifier))
+    (block
+      (let_stmt
+        (identifier)
+        (fstring_literal
+          (fstring_segment)
+          (fstring_interp
+            (binary_expr
+              (identifier)
+              (identifier)))))
+      (expr_stmt
+        (identifier)))))
+
+================================================================================
+a triple-quoted string with holes spans lines and keeps its raw text
+================================================================================
+
+fn f(a: Int, b: Int) -> Str
+    let t = """
+        one ${a}
+        "two" ""quoted"" $x ${b:5} \n
+        """
+    t
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list
+      (param
+        (identifier)
+        (named_type
+          (identifier)))
+      (param
+        (identifier)
+        (named_type
+          (identifier))))
+    (named_type
+      (identifier))
+    (block
+      (let_stmt
+        (identifier)
+        (fstring_literal
+          (fstring_segment)
+          (fstring_interp
+            (identifier))
+          (fstring_segment)
+          (fstring_interp
+            (identifier)
+            (fstring_format_spec))
+          (fstring_segment)))
+      (expr_stmt
+        (identifier)))))
+
+================================================================================
+a hole at the start, a dollar before a hole, and an empty triple string
+================================================================================
+
+fn f(a: Int)
+    let v = """${a}"""
+    let w = """a$${a}"""
+    let e = """"""
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list
+      (param
+        (identifier)
+        (named_type
+          (identifier))))
+    (block
+      (let_stmt
+        (identifier)
+        (fstring_literal
+          (fstring_interp
+            (identifier))))
+      (let_stmt
+        (identifier)
+        (fstring_literal
+          (fstring_segment)
+          (fstring_interp
+            (identifier))))
+      (let_stmt
+        (identifier)
+        (string_literal)))))
+
+================================================================================
+a triple-quoted string inside a hole of a triple-quoted string
+================================================================================
+
+fn f(a: Int)
+    let n = """x ${g("""inner ${a}""")} y"""
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list
+      (param
+        (identifier)
+        (named_type
+          (identifier))))
+    (block
+      (let_stmt
+        (identifier)
+        (fstring_literal
+          (fstring_segment)
+          (fstring_interp
+            (call_expr
+              (identifier)
+              (fstring_literal
+                (fstring_segment)
+                (fstring_interp
+                  (identifier)))))
+          (fstring_segment))))))
+
+================================================================================
+a triple-quoted string without a hole stays one string_literal
+================================================================================
+
+fn f()
+    let u = """plain "q" ""r"" $x {y} $"""
+    u
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (fn_decl
+    (identifier)
+    (param_list)
+    (block
+      (let_stmt
+        (identifier)
+        (string_literal))
+      (expr_stmt
+        (identifier)))))

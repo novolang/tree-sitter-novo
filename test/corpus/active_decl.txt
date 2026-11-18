@@ -1,0 +1,122 @@
+================================================================================
+active — the sections of an object, and `active` or `queue` as a name
+================================================================================
+
+active Room
+    queue 8
+    priority 10
+    timers 2
+    tier embedded
+    event RoomEvent
+    machine lamps: [Lamp; 4]
+    machine Control
+    field out: Tally = Tally { presses: 0, holds: 0 }
+    on_start
+        println("start")
+    on_event
+        match ev
+            RoomEvent.Press(lamp, n) =>
+                self.lamps[lamp].step(LampEvent.Press(n), now, var self.out)
+
+fn main() [io]
+    let active = 3
+    let queue = active + 1
+    println("${queue}")
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (active_decl
+    (identifier)
+    (identifier)
+    (active_block
+      (active_line
+        (integer_literal))
+      (active_line
+        (integer_literal))
+      (active_line
+        (integer_literal))
+      (active_line
+        (identifier))
+      (active_line
+        (identifier))
+      (active_line
+        (identifier)
+        (fixed_array_type
+          (named_type
+            (identifier))
+          (integer_literal)))
+      (active_line
+        (identifier))
+      (active_line
+        (identifier)
+        (named_type
+          (identifier))
+        (struct_literal
+          (identifier)
+          (struct_literal_field
+            (identifier)
+            (integer_literal))
+          (struct_literal_field
+            (identifier)
+            (integer_literal))))
+      (active_line
+        (block
+          (expr_stmt
+            (call_expr
+              (identifier)
+              (string_literal)))))
+      (active_line
+        (block
+          (expr_stmt
+            (match_expr
+              (identifier)
+              (match_block
+                (match_arm
+                  (constructor_pattern
+                    (identifier)
+                    (identifier)
+                    (identifier_pattern
+                      (identifier))
+                    (identifier_pattern
+                      (identifier)))
+                  (block
+                    (expr_stmt
+                      (call_expr
+                        (field_access
+                          (index_expr
+                            (field_access
+                              (self_expr)
+                              (identifier))
+                            (identifier))
+                          (identifier))
+                        (call_expr
+                          (field_access
+                            (identifier)
+                            (identifier))
+                          (identifier))
+                        (identifier)
+                        (var_arg
+                          (field_access
+                            (self_expr)
+                            (identifier))))))))))))))
+  (fn_decl
+    (identifier)
+    (param_list)
+    (effect_list
+      (identifier))
+    (block
+      (let_stmt
+        (identifier)
+        (integer_literal))
+      (let_stmt
+        (identifier)
+        (binary_expr
+          (identifier)
+          (integer_literal)))
+      (expr_stmt
+        (call_expr
+          (identifier)
+          (fstring_literal
+            (fstring_interp
+              (identifier))))))))

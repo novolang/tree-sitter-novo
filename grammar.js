@@ -108,6 +108,10 @@ module.exports = grammar({
     // name is an identifier expression until the `{` after the
     // second name settles it as a struct literal.
     [$._expr, $.struct_literal],
+    // `active Room` followed by its indented body, against the
+    // expression `active` and a second statement that begins with `Room`:
+    // statements may follow one another on a line.
+    [$._expr, $.active_decl],
   ],
 
   rules: {
@@ -122,6 +126,7 @@ module.exports = grammar({
       $.trait_decl,
       $.impl_decl,
       $.state_machine_decl,
+      $.active_decl,
       $.register_decl,
       // The embedded surface.  These five arrived with the hardware
       // work and never reached this grammar, so `bsp Nrf52840` parsed
@@ -593,10 +598,53 @@ module.exports = grammar({
     //                    payload-bearing constructor decls)
     //   transitions    — `pattern => target` arms (often tuple
     //                    patterns like `(Red, Tick) => Green`)
+    //
+    // The extended form (SPEC 11.12) adds the output channel the rows
+    // send through, `state_machine Pairing(out: Outbox)`, and four
+    // pieces of body: a `fields` block of `var name: Type` lines, rows
+    // whose body is a block ending in the target, a target followed by
+    // `after 30 s Timeout`, and `enter State` / `exit State` blocks.
     state_machine_decl: $ => prec.right(seq(
       'state_machine',
       field('name', $.identifier),
+      optional(seq('(', field('out', $.param), ')')),
       optional(field('body', $.state_machine_block)),
+    )),
+
+    // The `active` declaration (SPEC 11.13): one task, a queue of a
+    // declared size, the machines it holds and two blocks.  `active` and
+    // the words of the body are contextual, so a program may still name
+    // a variable `queue` or `active` (`active = conn` is an assignment).
+    // The first word is therefore an identifier here, not a keyword
+    // token, which the lexer would take wherever a statement could begin
+    // with a declaration; a query tells the one word from an identifier
+    // (`#eq? @keyword "active"`).
+    //   active Thermostat
+    //       queue 8
+    //       machine Control
+    //       field out: Tally = Tally { presses: 0 }
+    //       on_start
+    //           ...
+    active_decl: $ => prec.dynamic(2, prec.right(seq(
+      field('keyword', $.identifier),
+      field('name', $.identifier),
+      optional(field('body', $.active_block)),
+    ))),
+
+    active_block: $ => seq(
+      $._indent,
+      repeat(seq($.active_line, optional($._newline))),
+      $._dedent,
+    ),
+
+    active_line: $ => prec.right(choice(
+      seq(choice('queue', 'priority', 'timers'), field('value', $.integer_literal)),
+      seq(choice('tier', 'event'), field('value', $.identifier)),
+      seq('machine', field('name', $.identifier),
+          optional(seq(':', field('type', $._type_expr)))),
+      seq('field', field('name', $.identifier), ':', field('type', $._type_expr),
+          optional(seq('=', field('default', $._expr)))),
+      seq(choice('on_start', 'on_event'), optional(field('body', $.block))),
     )),
 
     // M29 memory-mapped register decl:
@@ -928,12 +976,29 @@ module.exports = grammar({
     state_machine_block: $ => seq(
       $._indent,
       repeat(choice(
+        $.fields_block,
         $.states_block,
         $.events_block,
         $.transitions_block,
+        $.machine_hook_block,
       )),
       $._dedent,
     ),
+
+    // `fields\n    var mitm: Bool` — the machine's own fields.  The body
+    // is a struct body: the same `name: Type = default` lines.
+    fields_block: $ => prec.right(seq(
+      'fields',
+      optional(field('body', $.struct_body)),
+    )),
+
+    // `enter Failed\n    out.sent = 0` and `exit Failed ...` — a block
+    // that runs on every transition into or out of a state.
+    machine_hook_block: $ => prec.right(seq(
+      choice('enter', 'exit'),
+      field('state', $.identifier),
+      optional(field('body', $.block)),
+    )),
 
     // `states\n    Red\n    Yellow\n    Green` — variant list.
     // Accepts payload variants too (`Opening(p: Float)`) since the
@@ -951,11 +1016,52 @@ module.exports = grammar({
     )),
 
     // `transitions\n    (Red, Tick) => Green` — match-arm-shaped
-    // entries.  Reuses match_block since the body is identical.
+    // entries, `(state, event) [if guard] => target`.  A row's body is a
+    // target, with `after 30 s Timeout` after it when the row arms the
+    // state's timeout, or an indented block of actions whose last line is
+    // the target.
     transitions_block: $ => prec.right(seq(
       'transitions',
-      optional(field('body', $.match_block)),
+      optional(field('body', alias($._transitions_body, $.match_block))),
     )),
+
+    // Named as the match block and match arm the table form always was,
+    // so a query written for either keeps working.
+    _transitions_body: $ => seq(
+      $._indent,
+      repeat(seq(alias($._transition_row, $.match_arm), optional($._newline))),
+      $._dedent,
+    ),
+
+    _transition_row: $ => prec.right(seq(
+      field('pattern', $._pattern),
+      optional(seq('if', field('guard', $._expr))),
+      '=>',
+      choice(
+        seq(field('body', $._expr), optional($.after_clause)),
+        field('body', alias($._transition_block, $.block)),
+      ),
+    )),
+
+    // The actions of a row, then its target on the last line, which may
+    // carry the timeout: `WaitConfirm after 30 s Timeout`.
+    _transition_block: $ => seq(
+      $._indent,
+      repeat(seq(
+        choice($._top_level, seq($._expr, $.after_clause)),
+        optional($._newline),
+      )),
+      $._dedent,
+    ),
+
+    // `after 30 s Timeout` — the amount is a number or a name, the unit
+    // `s` or `ms`, and the event is a variant without a payload.
+    after_clause: $ => seq(
+      'after',
+      field('amount', choice($.integer_literal, $.identifier)),
+      field('unit', $.identifier),
+      field('event', $.identifier),
+    ),
 
     // Block of bare identifiers, one per line — for `states`.
     identifier_block: $ => seq(

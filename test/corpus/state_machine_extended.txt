@@ -1,0 +1,286 @@
+================================================================================
+state_machine — the output channel, fields, rows with bodies and a timeout
+================================================================================
+
+state_machine Pairing(out: Outbox)
+    fields
+        var mitm: Bool
+    states
+        Idle
+        WaitConfirm
+        Failed
+    events
+        Request(auth: Int)
+        Confirm(v: Int)
+        Timeout
+    transitions
+        (Idle, Request(auth)) =>
+            self.mitm = auth > 0
+            out.sent = out.sent + 1
+            WaitConfirm after 30 s Timeout
+        (WaitConfirm, Confirm(v)) if v == 0 => Failed
+        (WaitConfirm, Timeout) => Failed
+        (_, Timeout) => _
+    enter Failed
+        out.sent = out.sent + 100
+    exit WaitConfirm
+        out.sent = out.sent + 1
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (state_machine_decl
+    (identifier)
+    (param
+      (identifier)
+      (named_type
+        (identifier)))
+    (state_machine_block
+      (fields_block
+        (struct_body
+          (struct_field
+            (identifier)
+            (named_type
+              (identifier)))))
+      (states_block
+        (event_variant_block
+          (event_variant
+            (identifier))
+          (event_variant
+            (identifier))
+          (event_variant
+            (identifier))))
+      (events_block
+        (event_variant_block
+          (event_variant
+            (identifier)
+            (param
+              (identifier)
+              (named_type
+                (identifier))))
+          (event_variant
+            (identifier)
+            (param
+              (identifier)
+              (named_type
+                (identifier))))
+          (event_variant
+            (identifier))))
+      (transitions_block
+        (match_block
+          (match_arm
+            (tuple_pattern
+              (identifier_pattern
+                (identifier))
+              (constructor_pattern
+                (identifier)
+                (identifier_pattern
+                  (identifier))))
+            (block
+              (expr_stmt
+                (assignment_stmt
+                  (field_access
+                    (self_expr)
+                    (identifier))
+                  (binary_expr
+                    (identifier)
+                    (integer_literal))))
+              (expr_stmt
+                (assignment_stmt
+                  (field_access
+                    (identifier)
+                    (identifier))
+                  (binary_expr
+                    (field_access
+                      (identifier)
+                      (identifier))
+                    (integer_literal))))
+              (identifier)
+              (after_clause
+                (integer_literal)
+                (identifier)
+                (identifier))))
+          (match_arm
+            (tuple_pattern
+              (identifier_pattern
+                (identifier))
+              (constructor_pattern
+                (identifier)
+                (identifier_pattern
+                  (identifier))))
+            (binary_expr
+              (identifier)
+              (integer_literal))
+            (identifier))
+          (match_arm
+            (tuple_pattern
+              (identifier_pattern
+                (identifier))
+              (identifier_pattern
+                (identifier)))
+            (identifier))
+          (match_arm
+            (tuple_pattern
+              (wildcard_pattern)
+              (identifier_pattern
+                (identifier)))
+            (identifier))))
+      (machine_hook_block
+        (identifier)
+        (block
+          (expr_stmt
+            (assignment_stmt
+              (field_access
+                (identifier)
+                (identifier))
+              (binary_expr
+                (field_access
+                  (identifier)
+                  (identifier))
+                (integer_literal))))))
+      (machine_hook_block
+        (identifier)
+        (block
+          (expr_stmt
+            (assignment_stmt
+              (field_access
+                (identifier)
+                (identifier))
+              (binary_expr
+                (field_access
+                  (identifier)
+                  (identifier))
+                (integer_literal)))))))))
+
+================================================================================
+state_machine — a timeout on a one-line row, and a name for the amount
+================================================================================
+
+state_machine SmpTimer
+    states
+        Stopped
+        Running
+    events
+        Start
+        Timeout
+    transitions
+        (Stopped, Start) => Running after 30 s Timeout
+        (Running, Start) => Running after limit ms Timeout
+        (Running, Timeout) => Stopped
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (state_machine_decl
+    (identifier)
+    (state_machine_block
+      (states_block
+        (event_variant_block
+          (event_variant
+            (identifier))
+          (event_variant
+            (identifier))))
+      (events_block
+        (event_variant_block
+          (event_variant
+            (identifier))
+          (event_variant
+            (identifier))))
+      (transitions_block
+        (match_block
+          (match_arm
+            (tuple_pattern
+              (identifier_pattern
+                (identifier))
+              (identifier_pattern
+                (identifier)))
+            (identifier)
+            (after_clause
+              (integer_literal)
+              (identifier)
+              (identifier)))
+          (match_arm
+            (tuple_pattern
+              (identifier_pattern
+                (identifier))
+              (identifier_pattern
+                (identifier)))
+            (identifier)
+            (after_clause
+              (identifier)
+              (identifier)
+              (identifier)))
+          (match_arm
+            (tuple_pattern
+              (identifier_pattern
+                (identifier))
+              (identifier_pattern
+                (identifier)))
+            (identifier)))))))
+
+================================================================================
+state_machine — a row whose state or event pattern is an or-pattern
+================================================================================
+
+state_machine Lamp
+    states
+        Off
+        On
+        Broken
+    events
+        Press
+        Smash
+    transitions
+        (Off, Press) => On
+        (Off | On, Smash) => Broken
+        (Broken, Smash | Press) => Off
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (state_machine_decl
+    (identifier)
+    (state_machine_block
+      (states_block
+        (event_variant_block
+          (event_variant
+            (identifier))
+          (event_variant
+            (identifier))
+          (event_variant
+            (identifier))))
+      (events_block
+        (event_variant_block
+          (event_variant
+            (identifier))
+          (event_variant
+            (identifier))))
+      (transitions_block
+        (match_block
+          (match_arm
+            (tuple_pattern
+              (identifier_pattern
+                (identifier))
+              (identifier_pattern
+                (identifier)))
+            (identifier))
+          (match_arm
+            (tuple_pattern
+              (or_pattern
+                (identifier_pattern
+                  (identifier))
+                (identifier_pattern
+                  (identifier)))
+              (identifier_pattern
+                (identifier)))
+            (identifier))
+          (match_arm
+            (tuple_pattern
+              (identifier_pattern
+                (identifier))
+              (or_pattern
+                (identifier_pattern
+                  (identifier))
+                (identifier_pattern
+                  (identifier))))
+            (identifier)))))))
